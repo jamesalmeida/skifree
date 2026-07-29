@@ -1,0 +1,604 @@
+[
+  {
+    "id": 1,
+    "label": "tree_small_a",
+    "file": "001_tree_small_a.png",
+    "w": 16,
+    "h": 32
+  },
+  {
+    "id": 2,
+    "label": "tree_small_b",
+    "file": "002_tree_small_b.png",
+    "w": 16,
+    "h": 32
+  },
+  {
+    "id": 3,
+    "label": "skier_west",
+    "file": "003_skier_west.png",
+    "w": 24,
+    "h": 28
+  },
+  {
+    "id": 4,
+    "label": "skier_east",
+    "file": "004_skier_east.png",
+    "w": 24,
+    "h": 28
+  },
+  {
+    "id": 5,
+    "label": "skier_wsWest",
+    "file": "005_skier_wsWest.png",
+    "w": 16,
+    "h": 32
+  },
+  {
+    "id": 6,
+    "label": "skier_esEast",
+    "file": "006_skier_esEast.png",
+    "w": 24,
+    "h": 28
+  },
+  {
+    "id": 7,
+    "label": "skier_sWest",
+    "file": "007_skier_sWest.png",
+    "w": 24,
+    "h": 28
+  },
+  {
+    "id": 8,
+    "label": "skier_sEast",
+    "file": "008_skier_sEast.png",
+    "w": 24,
+    "h": 28
+  },
+  {
+    "id": 9,
+    "label": "skier_south",
+    "file": "009_skier_south.png",
+    "w": 24,
+    "h": 28
+  },
+  {
+    "id": 10,
+    "label": "skier_south_alt",
+    "file": "010_skier_south_alt.png",
+    "w": 24,
+    "h": 28
+  },
+  {
+    "id": 11,
+    "label": "skier_jump",
+    "file": "011_skier_jump.png",
+    "w": 24,
+    "h": 28
+  },
+  {
+    "id": 12,
+    "label": "skier_ouch",
+    "file": "012_skier_ouch.png",
+    "w": 32,
+    "h": 32
+  },
+  {
+    "id": 13,
+    "label": "skier_sit_l",
+    "file": "013_skier_sit_l.png",
+    "w": 32,
+    "h": 24
+  },
+  {
+    "id": 14,
+    "label": "skier_sit_r",
+    "file": "014_skier_sit_r.png",
+    "w": 32,
+    "h": 32
+  },
+  {
+    "id": 15,
+    "label": "skier_tumble_a",
+    "file": "015_skier_tumble_a.png",
+    "w": 28,
+    "h": 31
+  },
+  {
+    "id": 16,
+    "label": "skier_tumble_b",
+    "file": "016_skier_tumble_b.png",
+    "w": 28,
+    "h": 31
+  },
+  {
+    "id": 17,
+    "label": "skier_tumble_c",
+    "file": "017_skier_tumble_c.png",
+    "w": 28,
+    "h": 34
+  },
+  {
+    "id": 18,
+    "label": "skier_tumble_d",
+    "file": "018_skier_tumble_d.png",
+    "w": 32,
+    "h": 26
+  },
+  {
+    "id": 19,
+    "label": "skier_lift_stand",
+    "file": "019_skier_lift_stand.png",
+    "w": 32,
+    "h": 32
+  },
+  {
+    "id": 20,
+    "label": "skier_lift_sit",
+    "file": "020_skier_lift_sit.png",
+    "w": 31,
+    "h": 24
+  },
+  {
+    "id": 21,
+    "label": "skier_misc_a",
+    "file": "021_skier_misc_a.png",
+    "w": 25,
+    "h": 31
+  },
+  {
+    "id": 22,
+    "label": "skier_misc_b",
+    "file": "022_skier_misc_b.png",
+    "w": 25,
+    "h": 31
+  },
+  {
+    "id": 23,
+    "label": "flag_red",
+    "file": "023_flag_red.png",
+    "w": 12,
+    "h": 24
+  },
+  {
+    "id": 24,
+    "label": "flag_green",
+    "file": "024_flag_green.png",
+    "w": 12,
+    "h": 24
+  },
+  {
+    "id": 25,
+    "label": "marker_green",
+    "file": "025_marker_green.png",
+    "w": 12,
+    "h": 24
+  },
+  {
+    "id": 26,
+    "label": "marker_red",
+    "file": "026_marker_red.png",
+    "w": 12,
+    "h": 24
+  },
+  {
+    "id": 27,
+    "label": "cloud",
+    "file": "027_cloud.png",
+    "w": 64,
+    "h": 32
+  },
+  {
+    "id": 28,
+    "label": "snowboarder_se",
+    "file": "028_snowboarder_se.png",
+    "w": 24,
+    "h": 30
+  },
+  {
+    "id": 29,
+    "label": "snowboarder_sw",
+    "file": "029_snowboarder_sw.png",
+    "w": 22,
+    "h": 29
+  },
+  {
+    "id": 30,
+    "label": "snowboarder_s",
+    "file": "030_snowboarder_s.png",
+    "w": 21,
+    "h": 29
+  },
+  {
+    "id": 31,
+    "label": "dog_a",
+    "file": "031_dog_a.png",
+    "w": 24,
+    "h": 24
+  },
+  {
+    "id": 32,
+    "label": "dog_b",
+    "file": "032_dog_b.png",
+    "w": 24,
+    "h": 24
+  },
+  {
+    "id": 33,
+    "label": "rock_a",
+    "file": "033_rock_a.png",
+    "w": 21,
+    "h": 15
+  },
+  {
+    "id": 34,
+    "label": "rock_b",
+    "file": "034_rock_b.png",
+    "w": 21,
+    "h": 15
+  },
+  {
+    "id": 35,
+    "label": "stump_a",
+    "file": "035_stump_a.png",
+    "w": 19,
+    "h": 19
+  },
+  {
+    "id": 36,
+    "label": "stump_b",
+    "file": "036_stump_b.png",
+    "w": 19,
+    "h": 19
+  },
+  {
+    "id": 37,
+    "label": "skier_red_a",
+    "file": "037_skier_red_a.png",
+    "w": 26,
+    "h": 30
+  },
+  {
+    "id": 38,
+    "label": "skier_red_b",
+    "file": "038_skier_red_b.png",
+    "w": 20,
+    "h": 30
+  },
+  {
+    "id": 39,
+    "label": "skier_blue_a",
+    "file": "039_skier_blue_a.png",
+    "w": 25,
+    "h": 31
+  },
+  {
+    "id": 40,
+    "label": "skier_blue_b",
+    "file": "040_skier_blue_b.png",
+    "w": 30,
+    "h": 29
+  },
+  {
+    "id": 41,
+    "label": "skier_crash_air",
+    "file": "041_skier_crash_air.png",
+    "w": 32,
+    "h": 32
+  },
+  {
+    "id": 42,
+    "label": "skier_crash_air2",
+    "file": "042_skier_crash_air2.png",
+    "w": 32,
+    "h": 32
+  },
+  {
+    "id": 43,
+    "label": "npc_ski_a",
+    "file": "043_npc_ski_a.png",
+    "w": 25,
+    "h": 29
+  },
+  {
+    "id": 44,
+    "label": "npc_ski_b",
+    "file": "044_npc_ski_b.png",
+    "w": 29,
+    "h": 25
+  },
+  {
+    "id": 45,
+    "label": "snow_bump",
+    "file": "045_snow_bump.png",
+    "w": 23,
+    "h": 11
+  },
+  {
+    "id": 46,
+    "label": "snow_pile",
+    "file": "046_snow_pile.png",
+    "w": 16,
+    "h": 11
+  },
+  {
+    "id": 47,
+    "label": "snow_line",
+    "file": "047_snow_line.png",
+    "w": 16,
+    "h": 4
+  },
+  {
+    "id": 48,
+    "label": "snow_bank",
+    "file": "048_snow_bank.png",
+    "w": 24,
+    "h": 8
+  },
+  {
+    "id": 49,
+    "label": "tree_med",
+    "file": "049_tree_med.png",
+    "w": 28,
+    "h": 32
+  },
+  {
+    "id": 50,
+    "label": "tree_dead",
+    "file": "050_tree_dead.png",
+    "w": 22,
+    "h": 27
+  },
+  {
+    "id": 51,
+    "label": "tree_tall",
+    "file": "051_tree_tall.png",
+    "w": 32,
+    "h": 64
+  },
+  {
+    "id": 52,
+    "label": "rainbow_ramp",
+    "file": "052_rainbow_ramp.png",
+    "w": 32,
+    "h": 8
+  },
+  {
+    "id": 53,
+    "label": "logo",
+    "file": "053_logo.png",
+    "w": 105,
+    "h": 55
+  },
+  {
+    "id": 54,
+    "label": "version",
+    "file": "054_version.png",
+    "w": 46,
+    "h": 9
+  },
+  {
+    "id": 55,
+    "label": "sign_numpad",
+    "file": "055_sign_numpad.png",
+    "w": 92,
+    "h": 30
+  },
+  {
+    "id": 56,
+    "label": "sign_fkeys",
+    "file": "056_sign_fkeys.png",
+    "w": 63,
+    "h": 32
+  },
+  {
+    "id": 57,
+    "label": "sign_start_l",
+    "file": "057_sign_start_l.png",
+    "w": 42,
+    "h": 27
+  },
+  {
+    "id": 58,
+    "label": "sign_start_r",
+    "file": "058_sign_start_r.png",
+    "w": 42,
+    "h": 27
+  },
+  {
+    "id": 59,
+    "label": "sign_finish_l",
+    "file": "059_sign_finish_l.png",
+    "w": 50,
+    "h": 29
+  },
+  {
+    "id": 60,
+    "label": "sign_finish_r",
+    "file": "060_sign_finish_r.png",
+    "w": 50,
+    "h": 29
+  },
+  {
+    "id": 61,
+    "label": "sign_slalom",
+    "file": "061_sign_slalom.png",
+    "w": 40,
+    "h": 36
+  },
+  {
+    "id": 62,
+    "label": "sign_tree_slalom",
+    "file": "062_sign_tree_slalom.png",
+    "w": 44,
+    "h": 36
+  },
+  {
+    "id": 63,
+    "label": "sign_freestyle",
+    "file": "063_sign_freestyle.png",
+    "w": 40,
+    "h": 35
+  },
+  {
+    "id": 64,
+    "label": "lift_pole",
+    "file": "064_lift_pole.png",
+    "w": 24,
+    "h": 64
+  },
+  {
+    "id": 65,
+    "label": "chair_empty",
+    "file": "065_chair_empty.png",
+    "w": 26,
+    "h": 32
+  },
+  {
+    "id": 66,
+    "label": "chair_person",
+    "file": "066_chair_person.png",
+    "w": 26,
+    "h": 32
+  },
+  {
+    "id": 67,
+    "label": "chair_pair",
+    "file": "067_chair_pair.png",
+    "w": 26,
+    "h": 32
+  },
+  {
+    "id": 68,
+    "label": "yeti_stand",
+    "file": "068_yeti_stand.png",
+    "w": 32,
+    "h": 48
+  },
+  {
+    "id": 69,
+    "label": "yeti_run1",
+    "file": "069_yeti_run1.png",
+    "w": 32,
+    "h": 48
+  },
+  {
+    "id": 70,
+    "label": "yeti_run2",
+    "file": "070_yeti_run2.png",
+    "w": 32,
+    "h": 48
+  },
+  {
+    "id": 71,
+    "label": "yeti_run3",
+    "file": "071_yeti_run3.png",
+    "w": 32,
+    "h": 48
+  },
+  {
+    "id": 72,
+    "label": "yeti_run4",
+    "file": "072_yeti_run4.png",
+    "w": 32,
+    "h": 48
+  },
+  {
+    "id": 73,
+    "label": "yeti_run5",
+    "file": "073_yeti_run5.png",
+    "w": 32,
+    "h": 48
+  },
+  {
+    "id": 74,
+    "label": "yeti_eat1",
+    "file": "074_yeti_eat1.png",
+    "w": 32,
+    "h": 48
+  },
+  {
+    "id": 75,
+    "label": "yeti_eat2",
+    "file": "075_yeti_eat2.png",
+    "w": 32,
+    "h": 48
+  },
+  {
+    "id": 76,
+    "label": "yeti_eat3",
+    "file": "076_yeti_eat3.png",
+    "w": 32,
+    "h": 48
+  },
+  {
+    "id": 77,
+    "label": "yeti_eat4",
+    "file": "077_yeti_eat4.png",
+    "w": 32,
+    "h": 48
+  },
+  {
+    "id": 78,
+    "label": "yeti_eat5",
+    "file": "078_yeti_eat5.png",
+    "w": 32,
+    "h": 48
+  },
+  {
+    "id": 79,
+    "label": "yeti_eat6",
+    "file": "079_yeti_eat6.png",
+    "w": 32,
+    "h": 48
+  },
+  {
+    "id": 80,
+    "label": "yeti_full",
+    "file": "080_yeti_full.png",
+    "w": 32,
+    "h": 48
+  },
+  {
+    "id": 81,
+    "label": "yeti_wave",
+    "file": "081_yeti_wave.png",
+    "w": 32,
+    "h": 48
+  },
+  {
+    "id": 82,
+    "label": "ramp_small",
+    "file": "082_ramp_small.png",
+    "w": 16,
+    "h": 8
+  },
+  {
+    "id": 83,
+    "label": "fire_a",
+    "file": "083_fire_a.png",
+    "w": 22,
+    "h": 27
+  },
+  {
+    "id": 84,
+    "label": "fire_b",
+    "file": "084_fire_b.png",
+    "w": 22,
+    "h": 27
+  },
+  {
+    "id": 85,
+    "label": "fire_c",
+    "file": "085_fire_c.png",
+    "w": 22,
+    "h": 27
+  },
+  {
+    "id": 86,
+    "label": "cursor",
+    "file": "086_cursor.png",
+    "w": 8,
+    "h": 11
+  }
+]

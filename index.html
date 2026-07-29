@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SkiFree Remake</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='14' font-size='14'>🎿</text></svg>" />
+  </head>
+  <body>
+    <div id="app">
+      <canvas id="game"></canvas>
+      <div id="hud" class="hidden">
+        <div id="stats">
+          <div>Time: <span id="stat-time">0:00:00.00</span></div>
+          <div>Dist: <span id="stat-dist">0</span>m</div>
+          <div>Speed: <span id="stat-speed">0</span>m/s</div>
+          <div>Style: <span id="stat-style">0</span></div>
+        </div>
+        <div id="hud-toast"></div>
+      </div>
+      <div id="menu">
+        <div class="menu-panel">
+          <h1 class="logo">Ski<span>Free</span></h1>
+          <p class="subtitle">A browser remake · classic + 3D</p>
+          <p class="credit">Inspired by Chris Pirih / Microsoft (1991)</p>
+
+          <section class="option-group">
+            <label>Mode</label>
+            <div class="btn-row" id="mode-row">
+              <button type="button" data-mode="slalom" class="opt active">Slalom</button>
+              <button type="button" data-mode="freestyle" class="opt">Free Style</button>
+              <button type="button" data-mode="tree" class="opt">Tree Slalom</button>
+            </div>
+          </section>
+
+          <section class="option-group">
+            <label>Character</label>
+            <div class="btn-row" id="char-row">
+              <button type="button" data-char="skier" class="opt active">Skier</button>
+              <button type="button" data-char="snowboarder" class="opt">Snowboarder</button>
+            </div>
+            <p class="hint" id="char-hint">Classic two-ski freestyle control.</p>
+          </section>
+
+          <section class="option-group">
+            <label>Graphics</label>
+            <div class="btn-row" id="gfx-row">
+              <button type="button" data-gfx="classic" class="opt active">Classic 2D</button>
+              <button type="button" data-gfx="3d" class="opt">3D</button>
+            </div>
+          </section>
+
+          <button type="button" id="start-btn" class="start">Start run</button>
+
+          <div class="help">
+            <p><kbd>←</kbd><kbd>→</kbd> or mouse · steer · <kbd>↑</kbd>/<kbd>↓</kbd> speed</p>
+            <p><kbd>F2</kbd> restart · <kbd>F3</kbd> / <kbd>P</kbd> pause · <kbd>G</kbd> toggle graphics</p>
+            <p><kbd>C</kbd> switch character mid-run (when safe)</p>
+          </div>
+        </div>
+      </div>
+      <div id="pause-overlay" class="hidden">
+        <div class="overlay-panel">
+          <h2>Paused</h2>
+          <p>Press <kbd>F3</kbd> or <kbd>P</kbd> to continue</p>
+          <button type="button" id="resume-btn">Resume</button>
+          <button type="button" id="menu-btn" class="secondary">Main menu</button>
+        </div>
+      </div>
+      <div id="gameover-overlay" class="hidden">
+        <div class="overlay-panel">
+          <h2 id="gameover-title">Ouch!</h2>
+          <p id="gameover-msg"></p>
+          <div id="gameover-stats"></div>
+          <button type="button" id="retry-btn">Try again</button>
+          <button type="button" id="gameover-menu-btn" class="secondary">Main menu</button>
+        </div>
+      </div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

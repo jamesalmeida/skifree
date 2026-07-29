@@ -1,0 +1,19 @@
+# Dependencies & build
+node_modules/
+dist/
+*.local
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Original copyrighted binary (not redistributed)
+# Extracted sprites in public/ are used by the remake; re-extract with npm run extract-sprites
+SKIFREE game files/
+
+# Logs / cache
+*.log
+.cache/

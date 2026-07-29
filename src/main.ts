@@ -1,0 +1,219 @@
+import "./style.css";
+import { Game } from "./game/Game";
+import type { CharacterType, GameMode, GraphicsMode } from "./game/types";
+import { ClassicRenderer } from "./render/ClassicRenderer";
+import { Renderer3D } from "./render/Renderer3D";
+import { preloadOriginalSprites } from "./render/originalSprites";
+
+const canvas = document.getElementById("game") as HTMLCanvasElement;
+const canvas3d = document.createElement("canvas");
+canvas3d.id = "game3d";
+canvas3d.style.cssText =
+  "position:fixed;inset:0;width:100%;height:100%;display:none;cursor:none;";
+document.getElementById("app")!.insertBefore(canvas3d, canvas);
+
+const menu = document.getElementById("menu")!;
+const hud = document.getElementById("hud")!;
+const pauseOverlay = document.getElementById("pause-overlay")!;
+const gameoverOverlay = document.getElementById("gameover-overlay")!;
+const toastEl = document.getElementById("hud-toast")!;
+
+const statTime = document.getElementById("stat-time")!;
+const statDist = document.getElementById("stat-dist")!;
+const statSpeed = document.getElementById("stat-speed")!;
+const statStyle = document.getElementById("stat-style")!;
+const charHint = document.getElementById("char-hint")!;
+
+const gameoverTitle = document.getElementById("gameover-title")!;
+const gameoverMsg = document.getElementById("gameover-msg")!;
+const gameoverStats = document.getElementById("gameover-stats")!;
+
+let mode: GameMode = "slalom";
+let character: CharacterType = "skier";
+let graphics: GraphicsMode = "classic";
+
+const game = new Game(canvas, { mode, character, graphics });
+const classic = new ClassicRenderer(canvas);
+const modern = new Renderer3D(canvas3d);
+
+function bindOptionRow<T extends string>(
+  rowId: string,
+  attr: string,
+  onPick: (v: T) => void,
+) {
+  const row = document.getElementById(rowId)!;
+  row.addEventListener("click", (e) => {
+    const btn = (e.target as HTMLElement).closest(
+      "button[data-" + attr + "]",
+    ) as HTMLElement | null;
+    if (!btn) return;
+    row.querySelectorAll(".opt").forEach((b) => b.classList.remove("active"));
+    btn.classList.add("active");
+    onPick(btn.getAttribute("data-" + attr) as T);
+  });
+}
+
+bindOptionRow<GameMode>("mode-row", "mode", (v) => {
+  mode = v;
+});
+bindOptionRow<CharacterType>("char-row", "char", (v) => {
+  character = v;
+  charHint.textContent =
+    v === "snowboarder"
+      ? "Ride the board: snappier edges, more air, style bonus."
+      : "Classic two-ski control (original sprites from SKI.EXE).";
+});
+bindOptionRow<GraphicsMode>("gfx-row", "gfx", (v) => {
+  graphics = v;
+});
+
+function formatTime(ms: number) {
+  const totalCs = Math.floor(ms / 10);
+  const cs = totalCs % 100;
+  const totalSec = Math.floor(totalCs / 100);
+  const s = totalSec % 60;
+  const m = Math.floor(totalSec / 60);
+  const h = Math.floor(m / 60);
+  const mm = m % 60;
+  return `${h}:${String(mm).padStart(2, "0")}:${String(s).padStart(2, "0")}.${String(cs).padStart(2, "0")}`;
+}
+
+function resize() {
+  const dpr = window.devicePixelRatio || 1;
+  classic.resize(window.innerWidth, window.innerHeight, dpr);
+  modern.resize(window.innerWidth, window.innerHeight, dpr);
+}
+
+function applyGraphics(g: GraphicsMode) {
+  graphics = g;
+  game.setGraphics(g);
+  const is3d = g === "3d";
+  canvas.style.display = is3d ? "none" : "block";
+  canvas3d.style.display = is3d ? "block" : "none";
+  modern.setActive(is3d);
+  document.querySelectorAll("#gfx-row .opt").forEach((b) => {
+    b.classList.toggle("active", b.getAttribute("data-gfx") === g);
+  });
+}
+
+function syncUi() {
+  const snap = game.snapshot();
+  const playing = snap.state === "playing" || snap.state === "paused";
+
+  menu.classList.toggle("hidden", snap.state !== "menu");
+  hud.classList.toggle("hidden", !playing);
+  pauseOverlay.classList.toggle("hidden", snap.state !== "paused");
+
+  const showOver = snap.state === "eaten" || snap.state === "finished";
+  gameoverOverlay.classList.toggle("hidden", !showOver);
+
+  if (playing || showOver) {
+    statTime.textContent = formatTime(snap.timeMs);
+    statDist.textContent = String(Math.floor(snap.distance));
+    statSpeed.textContent = snap.speed.toFixed(0);
+    statStyle.textContent = String(snap.style);
+  }
+
+  if (snap.message) {
+    toastEl.textContent = snap.message;
+    toastEl.classList.add("show");
+  } else {
+    toastEl.classList.remove("show");
+  }
+
+  if (snap.state === "eaten") {
+    gameoverTitle.textContent = "Yummy!";
+    gameoverMsg.textContent = "The Abominable Snow Monster got you.";
+    gameoverStats.innerHTML = `Distance: ${Math.floor(snap.distance)}m<br>Style: ${snap.style}<br>Time: ${formatTime(snap.timeMs)}`;
+  } else if (snap.state === "finished") {
+    gameoverTitle.textContent = "Finish!";
+    gameoverMsg.textContent = "You cleared the course.";
+    gameoverStats.innerHTML = `Time: ${formatTime(snap.timeMs)}<br>Style: ${snap.style}<br>Gates: ${snap.gatesPassed}/${snap.gatesTotal}`;
+  }
+
+  if (snap.graphics !== graphics) {
+    applyGraphics(snap.graphics);
+  }
+}
+
+game.setOnChange(syncUi);
+
+document.getElementById("start-btn")!.addEventListener("click", () => {
+  applyGraphics(graphics);
+  game.start({ mode, character, graphics });
+  syncUi();
+});
+
+document.getElementById("resume-btn")!.addEventListener("click", () => {
+  game.togglePause();
+  syncUi();
+});
+
+document.getElementById("menu-btn")!.addEventListener("click", () => {
+  game.goMenu();
+  syncUi();
+});
+
+document.getElementById("retry-btn")!.addEventListener("click", () => {
+  applyGraphics(graphics);
+  game.start({ mode, character, graphics });
+  syncUi();
+});
+
+document.getElementById("gameover-menu-btn")!.addEventListener("click", () => {
+  game.goMenu();
+  syncUi();
+});
+
+window.addEventListener("resize", resize);
+
+async function boot() {
+  const startBtn = document.getElementById("start-btn") as HTMLButtonElement;
+  startBtn.disabled = true;
+  startBtn.textContent = "Loading sprites…";
+  try {
+    await preloadOriginalSprites();
+  } catch (e) {
+    console.error(e);
+  }
+  startBtn.disabled = false;
+  startBtn.textContent = "Start run";
+  resize();
+  applyGraphics("classic");
+  syncUi();
+
+  function frame(now: number) {
+    game.tick(now);
+    const snap = game.snapshot();
+
+    if (snap.state === "playing" || snap.state === "paused") {
+      statTime.textContent = formatTime(snap.timeMs);
+      statDist.textContent = String(Math.floor(snap.distance));
+      statSpeed.textContent = snap.speed.toFixed(0);
+      statStyle.textContent = String(snap.style);
+      if (snap.message) {
+        toastEl.textContent = snap.message;
+        toastEl.classList.add("show");
+      } else {
+        toastEl.classList.remove("show");
+      }
+    }
+
+    if (snap.state === "eaten" || snap.state === "finished") {
+      if (gameoverOverlay.classList.contains("hidden")) syncUi();
+    }
+
+    if (snap.graphics === "3d") {
+      modern.render(snap);
+    } else {
+      classic.render(snap);
+    }
+
+    if (snap.graphics !== graphics) applyGraphics(snap.graphics);
+    requestAnimationFrame(frame);
+  }
+
+  requestAnimationFrame(frame);
+}
+
+boot();
