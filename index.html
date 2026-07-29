@@ -58,6 +58,23 @@
             <p><kbd>F2</kbd> restart · <kbd>F3</kbd> / <kbd>P</kbd> pause · <kbd>G</kbd> toggle graphics</p>
             <p><kbd>C</kbd> switch character mid-run (when safe)</p>
           </div>
+
+          <button type="button" id="settings-gear" class="settings-gear" title="Fine-tune game feel" aria-label="Settings">
+            ⚙
+          </button>
+        </div>
+      </div>
+
+      <div id="settings-backdrop" class="hidden"></div>
+      <div id="settings-panel" class="hidden" role="dialog" aria-labelledby="settings-title">
+        <div class="settings-header">
+          <h2 id="settings-title">Game feel</h2>
+          <button type="button" id="settings-close" class="settings-x" aria-label="Close">×</button>
+        </div>
+        <p class="settings-intro">Tweaks apply immediately and save in this browser. All knobs live in <code>originalConstants.ts</code>.</p>
+        <div id="settings-fields" class="settings-fields"></div>
+        <div class="settings-footer">
+          <button type="button" id="settings-reset" class="secondary">Reset defaults</button>
         </div>
       </div>
       <div id="pause-overlay" class="hidden">

@@ -1,26 +1,11 @@
 /**
- * Constants recovered / reconstructed from SKI.EXE reverse engineering.
- * See tools/RE_NOTES.md for evidence.
+ * All tunable game feel lives here (plus the settings panel / localStorage).
+ * See tools/RE_NOTES.md for RE notes on originals.
+ *
+ * Code should import names from this module and read them at use-time
+ * (ESM live bindings) so the settings panel can update them live.
  */
 
-/** Original logical pixels per displayed metre (distance & speed HUD). */
-export const PIXELS_PER_METRE = 16;
-
-/** Yeti appears after this many metres of downhill travel. */
-export const YETI_DISTANCE_M = 2000;
-
-/**
- * Mouse delta thresholds (CSS px from skier / screen center) → direction steps.
- * Original EXE used 1 / 3 / 6 / 12 in 640-wide game pixels; scaled ~8× for
- * modern full-screen canvas so the center dead-zone actually yields south.
- * Order: [hard edge, sharp diagonal, mild diagonal, dead-zone].
- */
-export const MOUSE_DIR_THRESHOLDS = [96, 48, 28, 16] as const;
-
-/**
- * Direction order matching original sprite set (west → east).
- * Indices used by velocity table and sprite map.
- */
 export const DIR_ORDER = [
   "hardLeft", // west
   "left", // wsWest
@@ -31,42 +16,170 @@ export const DIR_ORDER = [
   "hardRight", // east
 ] as const;
 
-/**
- * Velocity in original pixels / second for each DIR_ORDER entry.
- *
- * Classic SkiFree: full west/east digs the edges in and **stops** (no
- * continuous sideways slide). Diagonals still move; pure south is fastest.
- * ~5–6 px/frame at 30 Hz for full tuck.
- */
-export const VELOCITY_PX_S: ReadonlyArray<{ x: number; y: number }> = [
-  { x: 0, y: 0 }, // west — coasts to a stop (see EDGE_FRICTION)
-  { x: -70, y: 55 }, // wsWest — slow carve
-  { x: -55, y: 130 }, // sWest
-  { x: 0, y: 175 }, // south
-  { x: 55, y: 130 }, // sEast
-  { x: 70, y: 55 }, // esEast — slow carve
-  { x: 0, y: 0 }, // east — coasts to a stop (see EDGE_FRICTION)
+export type TunableSettings = {
+  /** px per displayed metre */
+  pixelsPerMetre: number;
+  /** metres before yeti */
+  yetiDistanceM: number;
+  /** full-edge coast friction (higher = snappier stop) */
+  edgeFriction: number;
+  /** south (tuck) speed px/s — other dirs scale from defaults */
+  southSpeed: number;
+  /** wsWest / esEast horizontal speed scale vs defaults */
+  carveSpeedScale: number;
+  snowboardSpeedMul: number;
+  snowboardEdgeMul: number;
+  crashMs: number;
+  jumpMs: number;
+  turnStepMs: number;
+  classicScale: number;
+  /** mouse dead-zone radius (CSS px) for pure south */
+  mouseDeadZone: number;
+  /** mouse distance for full hard left/right */
+  mouseHardZone: number;
+  /** show Dir/vx/vy on HUD */
+  showDirDebug: boolean;
+};
+
+/** Factory defaults — reset target */
+export const DEFAULT_SETTINGS: TunableSettings = {
+  pixelsPerMetre: 16,
+  yetiDistanceM: 2000,
+  edgeFriction: 3.8,
+  southSpeed: 175,
+  carveSpeedScale: 1,
+  snowboardSpeedMul: 1.15,
+  snowboardEdgeMul: 0.9,
+  crashMs: 1400,
+  jumpMs: 700,
+  turnStepMs: 85,
+  classicScale: 2,
+  mouseDeadZone: 16,
+  mouseHardZone: 96,
+  showDirDebug: true,
+};
+
+const STORAGE_KEY = "skifree-settings-v1";
+
+function clamp(n: number, lo: number, hi: number) {
+  return Math.max(lo, Math.min(hi, n));
+}
+
+function loadStored(): Partial<TunableSettings> {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return {};
+    return JSON.parse(raw) as Partial<TunableSettings>;
+  } catch {
+    return {};
+  }
+}
+
+/** Active settings (mutated by the panel). */
+export const settings: TunableSettings = {
+  ...DEFAULT_SETTINGS,
+  ...loadStored(),
+};
+
+// ── Live exports used by game code ──────────────────────────────────────
+
+export let PIXELS_PER_METRE = settings.pixelsPerMetre;
+export let YETI_DISTANCE_M = settings.yetiDistanceM;
+export let EDGE_FRICTION = settings.edgeFriction;
+export let SNOWBOARD_SPEED_MUL = settings.snowboardSpeedMul;
+export let SNOWBOARD_EDGE_MUL = settings.snowboardEdgeMul;
+export let CRASH_MS = settings.crashMs;
+export let OUCH_MS = 500;
+export let JUMP_MS = settings.jumpMs;
+export let TURN_STEP_MS = settings.turnStepMs;
+export let CLASSIC_SCALE = settings.classicScale;
+export let SHOW_DIR_DEBUG = settings.showDirDebug;
+
+/** [hard, sharp, mild, dead] mouse thresholds in CSS px */
+export let MOUSE_DIR_THRESHOLDS: [number, number, number, number] = [
+  settings.mouseHardZone,
+  settings.mouseHardZone * 0.5,
+  settings.mouseHardZone * 0.3,
+  settings.mouseDeadZone,
 ];
 
 /**
- * How fast leftover speed bleeds off on full west/east / brake.
- * Higher = snappier stop. Lower = longer coast.
+ * Base direction vectors at default southSpeed=175; rebuilt when settings change.
+ * Indices match DIR_ORDER.
  */
-export const EDGE_FRICTION = 3.8;
+const BASE_VEL = [
+  { x: 0, y: 0 },
+  { x: -70, y: 55 },
+  { x: -55, y: 130 },
+  { x: 0, y: 175 },
+  { x: 55, y: 130 },
+  { x: 70, y: 55 },
+  { x: 0, y: 0 },
+] as const;
 
-/** Snowboarder multipliers vs skier (not in original as playable; tuned for fun). */
-export const SNOWBOARD_SPEED_MUL = 1.15;
-export const SNOWBOARD_EDGE_MUL = 0.9;
+export let VELOCITY_PX_S: { x: number; y: number }[] = BASE_VEL.map((v) => ({ ...v }));
 
-/** Crash / ouch recovery (ms) — matches ~1.5s sit-down feel. */
-export const CRASH_MS = 1400;
-export const OUCH_MS = 500;
+function rebuildVelocity() {
+  const s = settings.southSpeed / 175;
+  const c = settings.carveSpeedScale;
+  VELOCITY_PX_S = [
+    { x: 0, y: 0 },
+    { x: -70 * s * c, y: 55 * s * c },
+    { x: -55 * s, y: 130 * s },
+    { x: 0, y: settings.southSpeed },
+    { x: 55 * s, y: 130 * s },
+    { x: 70 * s * c, y: 55 * s * c },
+    { x: 0, y: 0 },
+  ];
+}
 
-/** Jump air time (ms). */
-export const JUMP_MS = 700;
+/** Push `settings` into live export bindings. */
+export function applySettings(partial?: Partial<TunableSettings>) {
+  if (partial) Object.assign(settings, partial);
 
-/** Keyboard: ms between automatic direction steps while key held. */
-export const TURN_STEP_MS = 85;
+  settings.pixelsPerMetre = clamp(settings.pixelsPerMetre, 4, 64);
+  settings.yetiDistanceM = clamp(settings.yetiDistanceM, 200, 10000);
+  settings.edgeFriction = clamp(settings.edgeFriction, 0.5, 20);
+  settings.southSpeed = clamp(settings.southSpeed, 40, 400);
+  settings.carveSpeedScale = clamp(settings.carveSpeedScale, 0.2, 2);
+  settings.snowboardSpeedMul = clamp(settings.snowboardSpeedMul, 0.5, 2.5);
+  settings.snowboardEdgeMul = clamp(settings.snowboardEdgeMul, 0.3, 1.5);
+  settings.crashMs = clamp(settings.crashMs, 200, 4000);
+  settings.jumpMs = clamp(settings.jumpMs, 200, 2500);
+  settings.turnStepMs = clamp(settings.turnStepMs, 20, 300);
+  settings.classicScale = clamp(Math.round(settings.classicScale), 1, 5);
+  settings.mouseDeadZone = clamp(settings.mouseDeadZone, 0, 120);
+  settings.mouseHardZone = clamp(settings.mouseHardZone, 40, 400);
 
-/** Draw scale for classic 2D (integer; keeps pixels crisp). */
-export const CLASSIC_SCALE = 2;
+  PIXELS_PER_METRE = settings.pixelsPerMetre;
+  YETI_DISTANCE_M = settings.yetiDistanceM;
+  EDGE_FRICTION = settings.edgeFriction;
+  SNOWBOARD_SPEED_MUL = settings.snowboardSpeedMul;
+  SNOWBOARD_EDGE_MUL = settings.snowboardEdgeMul;
+  CRASH_MS = settings.crashMs;
+  JUMP_MS = settings.jumpMs;
+  TURN_STEP_MS = settings.turnStepMs;
+  CLASSIC_SCALE = settings.classicScale;
+  SHOW_DIR_DEBUG = settings.showDirDebug;
+  MOUSE_DIR_THRESHOLDS = [
+    settings.mouseHardZone,
+    settings.mouseHardZone * 0.5,
+    settings.mouseHardZone * 0.3,
+    settings.mouseDeadZone,
+  ];
+  rebuildVelocity();
+}
+
+export function saveSettings() {
+  applySettings();
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+}
+
+export function resetSettings() {
+  Object.assign(settings, DEFAULT_SETTINGS);
+  applySettings();
+  localStorage.removeItem(STORAGE_KEY);
+}
+
+// Apply stored values on load
+applySettings();

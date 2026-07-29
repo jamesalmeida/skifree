@@ -1,9 +1,11 @@
 import "./style.css";
 import { Game } from "./game/Game";
 import type { CharacterType, GameMode, GraphicsMode } from "./game/types";
+import { SHOW_DIR_DEBUG } from "./game/originalConstants";
 import { ClassicRenderer } from "./render/ClassicRenderer";
 import { Renderer3D } from "./render/Renderer3D";
 import { preloadOriginalSprites } from "./render/originalSprites";
+import { initSettingsPanel } from "./ui/SettingsPanel";
 
 const canvas = document.getElementById("game") as HTMLCanvasElement;
 const canvas3d = document.createElement("canvas");
@@ -67,6 +69,16 @@ bindOptionRow<CharacterType>("char-row", "char", (v) => {
 bindOptionRow<GraphicsMode>("gfx-row", "gfx", (v) => {
   graphics = v;
 });
+
+function applyDirDebugVisibility() {
+  const el = document.querySelector("#stats .dir-debug") as HTMLElement | null;
+  if (el) el.style.display = SHOW_DIR_DEBUG ? "" : "none";
+}
+
+initSettingsPanel(() => {
+  applyDirDebugVisibility();
+});
+applyDirDebugVisibility();
 
 function formatTime(ms: number) {
   const totalCs = Math.floor(ms / 10);
