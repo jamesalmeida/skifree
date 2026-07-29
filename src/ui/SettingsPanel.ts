@@ -187,6 +187,19 @@ export function initSettingsPanel(onChange?: () => void) {
   let animRaf = 0;
   let animRunning = false;
 
+  /** Per-animation card state (survives re-render within session via Map by id) */
+  type AnimUiState = { paused: boolean; frame: number };
+  const animState = new Map<string, AnimUiState>();
+
+  function getAnimState(id: string): AnimUiState {
+    let s = animState.get(id);
+    if (!s) {
+      s = { paused: false, frame: 0 };
+      animState.set(id, s);
+    }
+    return s;
+  }
+
   // ── Build Game feel tab ──
   feelRoot.innerHTML = "";
   const groups = (["motion", "timing", "world", "input", "debug"] as const).filter((g) =>
@@ -213,21 +226,75 @@ export function initSettingsPanel(onChange?: () => void) {
     const animSection = document.createElement("section");
     animSection.className = "settings-section";
     animSection.innerHTML = `<h3 class="settings-section-title">Animations</h3>
-      <p class="settings-hint settings-section-hint">Cycling multi-frame sets used in-game.</p>`;
+      <p class="settings-hint settings-section-hint">Pause, step frames with ◀ ▶, then Copy to report a frame.</p>`;
     const animGrid = document.createElement("div");
     animGrid.className = "sprite-grid sprite-grid-anim";
     for (const anim of SPRITE_ANIMATIONS) {
+      const st = getAnimState(anim.id);
+      if (st.frame >= anim.keys.length) st.frame = 0;
       const card = document.createElement("div");
-      card.className = "sprite-card sprite-card-anim";
+      card.className = "sprite-card sprite-card-anim" + (st.paused ? " is-paused" : "");
       card.dataset.animId = anim.id;
       card.innerHTML = `
         <canvas class="sprite-canvas" width="96" height="96"></canvas>
         <div class="sprite-meta">
           <div class="sprite-key">${anim.label}</div>
-          <div class="sprite-file">${anim.keys.join(" → ")}</div>
+          <div class="sprite-file anim-frame-label"></div>
           <div class="sprite-dim">${anim.fps} fps · ${anim.keys.length} frames</div>
+          <div class="sprite-controls">
+            <button type="button" class="sprite-btn sprite-prev" title="Previous frame">◀</button>
+            <button type="button" class="sprite-btn sprite-pause" title="Pause / play">${st.paused ? "▶" : "⏸"}</button>
+            <button type="button" class="sprite-btn sprite-next" title="Next frame">▶</button>
+            <button type="button" class="sprite-btn sprite-copy" title="Copy name">Copy</button>
+          </div>
         </div>`;
       animGrid.appendChild(card);
+
+      const canvas = card.querySelector("canvas") as HTMLCanvasElement;
+      const frameLabel = card.querySelector(".anim-frame-label") as HTMLElement;
+      const btnPause = card.querySelector(".sprite-pause") as HTMLButtonElement;
+      const btnPrev = card.querySelector(".sprite-prev") as HTMLButtonElement;
+      const btnNext = card.querySelector(".sprite-next") as HTMLButtonElement;
+      const btnCopy = card.querySelector(".sprite-copy") as HTMLButtonElement;
+
+      const refresh = () => {
+        const key = anim.keys[st.frame] ?? anim.keys[0]!;
+        drawSpriteOnCanvas(canvas, key);
+        frameLabel.textContent = st.paused
+          ? `[${st.frame + 1}/${anim.keys.length}] ${key}`
+          : anim.keys.join(" → ");
+        btnPause.textContent = st.paused ? "▶" : "⏸";
+        card.classList.toggle("is-paused", st.paused);
+        btnPrev.disabled = !st.paused;
+        btnNext.disabled = !st.paused;
+      };
+      refresh();
+
+      btnPause.addEventListener("click", (e) => {
+        e.stopPropagation();
+        st.paused = !st.paused;
+        refresh();
+      });
+      btnPrev.addEventListener("click", (e) => {
+        e.stopPropagation();
+        if (!st.paused) return;
+        st.frame = (st.frame - 1 + anim.keys.length) % anim.keys.length;
+        refresh();
+      });
+      btnNext.addEventListener("click", (e) => {
+        e.stopPropagation();
+        if (!st.paused) return;
+        st.frame = (st.frame + 1) % anim.keys.length;
+        refresh();
+      });
+      btnCopy.addEventListener("click", async (e) => {
+        e.stopPropagation();
+        const key = anim.keys[st.frame] ?? anim.keys[0]!;
+        const text = st.paused
+          ? `${anim.id}:${key} (frame ${st.frame + 1}/${anim.keys.length})`
+          : anim.id;
+        await copyText(text, btnCopy);
+      });
     }
     animSection.appendChild(animGrid);
     spritesRoot.appendChild(animSection);
@@ -249,11 +316,18 @@ export function initSettingsPanel(onChange?: () => void) {
           <div class="sprite-key">${e.key}${e.flipped ? " ⟷" : ""}</div>
           <div class="sprite-file">${e.file}</div>
           <div class="sprite-dim">${e.loaded ? `${e.width}×${e.height}` : "missing"}</div>
+          <div class="sprite-controls">
+            <button type="button" class="sprite-btn sprite-copy" title="Copy name">Copy</button>
+          </div>
         </div>`;
       grid.appendChild(card);
-      // static draw
       const canvas = card.querySelector("canvas") as HTMLCanvasElement;
       drawSpriteOnCanvas(canvas, e.key);
+      const btnCopy = card.querySelector(".sprite-copy") as HTMLButtonElement;
+      btnCopy.addEventListener("click", async (ev) => {
+        ev.stopPropagation();
+        await copyText(e.key, btnCopy);
+      });
     }
     allSection.appendChild(grid);
     spritesRoot.appendChild(allSection);
@@ -263,7 +337,6 @@ export function initSettingsPanel(onChange?: () => void) {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     ctx.imageSmoothingEnabled = false;
-    // checker bg
     const s = 8;
     for (let y = 0; y < canvas.height; y += s) {
       for (let x = 0; x < canvas.width; x += s) {
@@ -295,11 +368,17 @@ export function initSettingsPanel(onChange?: () => void) {
     const cards = spritesRoot.querySelectorAll<HTMLElement>(".sprite-card-anim");
     for (const card of cards) {
       const id = card.dataset.animId;
+      if (!id) continue;
       const anim = SPRITE_ANIMATIONS.find((a) => a.id === id);
       if (!anim || anim.keys.length === 0) continue;
+      const st = getAnimState(id);
+      if (st.paused) continue; // leave frozen frame
       const canvas = card.querySelector("canvas") as HTMLCanvasElement;
-      const frame = Math.floor((t / 1000) * anim.fps) % anim.keys.length;
-      drawSpriteOnCanvas(canvas, anim.keys[frame]!);
+      const frameLabel = card.querySelector(".anim-frame-label") as HTMLElement | null;
+      st.frame = Math.floor((t / 1000) * anim.fps) % anim.keys.length;
+      const key = anim.keys[st.frame]!;
+      drawSpriteOnCanvas(canvas, key);
+      if (frameLabel) frameLabel.textContent = anim.keys.join(" → ");
     }
     animRaf = requestAnimationFrame(tickAnims);
   }
@@ -312,6 +391,24 @@ export function initSettingsPanel(onChange?: () => void) {
   function stopAnims() {
     animRunning = false;
     cancelAnimationFrame(animRaf);
+  }
+
+  async function copyText(text: string, btn: HTMLButtonElement) {
+    try {
+      await navigator.clipboard.writeText(text);
+      const prev = btn.textContent;
+      btn.textContent = "Copied!";
+      btn.classList.add("copied");
+      setTimeout(() => {
+        btn.textContent = prev;
+        btn.classList.remove("copied");
+      }, 900);
+    } catch {
+      btn.textContent = "Failed";
+      setTimeout(() => {
+        btn.textContent = "Copy";
+      }, 900);
+    }
   }
 
   function setTab(tab: TabId) {

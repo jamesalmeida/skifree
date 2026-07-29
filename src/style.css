@@ -288,6 +288,53 @@ body,
   margin-top: 2px;
 }
 
+.sprite-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.sprite-btn {
+  appearance: none;
+  border: 1px solid #cbd5e0;
+  background: #fff;
+  border-radius: 4px;
+  padding: 2px 7px;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink);
+  cursor: pointer;
+  line-height: 1.4;
+}
+
+.sprite-btn:hover:not(:disabled) {
+  background: #edf2f7;
+  border-color: #a0aec0;
+}
+
+.sprite-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.sprite-btn.copied {
+  background: #c6f6d5;
+  border-color: #68d391;
+  color: #22543d;
+}
+
+.sprite-card-anim.is-paused {
+  border-color: #f6ad55;
+  background: #fffaf0;
+}
+
+.sprite-card-anim.is-paused .sprite-canvas {
+  outline: 2px solid #ed8936;
+  outline-offset: -2px;
+}
+
 .settings-row-head {
   display: flex;
   justify-content: space-between;
