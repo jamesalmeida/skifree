@@ -128,8 +128,8 @@ export class World {
       }
     }
 
-    // Background skiers / snowboarders
-    if (this.rng.next() < 0.4) {
+    // Fast background skiers / snowboarders
+    if (this.rng.next() < 0.35) {
       const kind = this.rng.next() < 0.4 ? "snowboarder" : "skier";
       const side = this.rng.next() < 0.5 ? -1 : 1;
       this.npcs.push({
@@ -144,17 +144,32 @@ export class World {
       });
     }
 
-    // Dogs walking across the slope
-    if (this.rng.next() < 0.35) {
+    // Beginner snowplow skiers — pink, skis wedged, slowly downhill
+    if (this.rng.next() < 0.4) {
       const side = this.rng.next() < 0.5 ? -1 : 1;
       this.npcs.push({
         id: id(),
-        kind: "dog",
-        x: side * this.rng.range(40, 400),
+        kind: "beginner",
+        x: side * this.rng.range(20, 280),
         y: this.rng.range(y0, y1),
-        vx: -side * this.rng.range(35, 70), // walk across
-        vy: this.rng.range(15, 40), // slight downhill drift
-        dir: side < 0 ? "right" : "left",
+        vx: this.rng.range(-8, 8),
+        vy: this.rng.range(28, 48), // slow
+        dir: "down",
+        color: 0,
+      });
+    }
+
+    // Dogs walking across left/right
+    if (this.rng.next() < 0.4) {
+      const goingRight = this.rng.next() < 0.5;
+      this.npcs.push({
+        id: id(),
+        kind: "dog",
+        x: goingRight ? -WORLD_HALF + 40 : WORLD_HALF - 40,
+        y: this.rng.range(y0, y1),
+        vx: (goingRight ? 1 : -1) * this.rng.range(45, 85),
+        vy: this.rng.range(8, 25),
+        dir: goingRight ? "right" : "left",
         color: 0,
         dogState: "walk",
         dogTimer: 0,
@@ -167,6 +182,19 @@ export class World {
     for (const n of this.npcs) {
       if (n.kind === "dog") {
         this.updateDog(n, dt, playerY);
+        continue;
+      }
+      if (n.kind === "beginner") {
+        // Slow snowplow: mostly straight down, tiny wander
+        n.vx += (this.rng.next() - 0.5) * 12 * dt;
+        n.vx = Math.max(-12, Math.min(12, n.vx));
+        n.x += n.vx * dt;
+        n.y += n.vy * dt;
+        n.dir = "down";
+        if (n.y < playerY - 400) {
+          n.y = playerY + this.rng.range(250, 700);
+          n.x = this.rng.range(-WORLD_HALF + 100, WORLD_HALF - 100);
+        }
         continue;
       }
       n.x += n.vx * dt;
@@ -183,21 +211,27 @@ export class World {
 
   private updateDog(n: NPC, dt: number, playerY: number) {
     n.dogTimer = (n.dogTimer ?? 0) - dt;
-    n.dogFrame = ((n.dogFrame ?? 0) + dt * 8) % 2;
+    n.dogFrame = ((n.dogFrame ?? 0) + dt * 6) % 2;
 
     if (n.dogState === "woof" || n.dogState === "pee") {
-      // Stay put while reacting
+      // Freeze in place while barking / peeing
       if ((n.dogTimer ?? 0) <= 0) {
         n.dogState = "walk";
       }
       return;
     }
 
+    // Walk across the slope
     n.x += n.vx * dt;
     n.y += n.vy * dt;
-    if (Math.abs(n.x) > WORLD_HALF - 20) {
-      n.vx *= -1;
-      n.dir = n.vx > 0 ? "right" : "left";
+    if (n.x > WORLD_HALF - 30) {
+      n.x = WORLD_HALF - 30;
+      n.vx = -Math.abs(n.vx);
+      n.dir = "left";
+    } else if (n.x < -WORLD_HALF + 30) {
+      n.x = -WORLD_HALF + 30;
+      n.vx = Math.abs(n.vx);
+      n.dir = "right";
     }
     if (n.y < playerY - 400) {
       n.y = playerY + this.rng.range(200, 600);

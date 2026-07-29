@@ -58,14 +58,15 @@ export interface Obstacle {
 
 export interface NPC {
   id: number;
-  kind: "skier" | "snowboarder" | "dog";
+  /** skier/snowboarder = fast background; beginner = slow snowplow; dog = cross-slope */
+  kind: "skier" | "snowboarder" | "beginner" | "dog";
   x: number;
   y: number;
   vx: number;
   vy: number;
   dir: Direction;
   color: number;
-  /** dog: walking | paused woof | peeing */
+  /** dog: walking across | paused woof | peeing */
   dogState?: "walk" | "woof" | "pee";
   dogTimer?: number;
   dogFrame?: number;

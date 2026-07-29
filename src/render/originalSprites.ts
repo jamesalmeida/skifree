@@ -45,7 +45,7 @@ const RAW: Record<string, { file: string; flip?: boolean }> = {
   tree: { file: "051_tree_tall.png" },
   smallTree: { file: "049_tree_med.png" },
   deadTree: { file: "050_tree_dead.png" },
-  rock: { file: "033_rock_a.png" },
+  rock: { file: "rock_bump.png" }, // was mislabeled dog; use snow bump
   stump: { file: "035_stump_a.png" },
   jump: { file: "052_rainbow_ramp.png" },
   mushroom: { file: "036_stump_b.png" },
@@ -61,10 +61,14 @@ const RAW: Record<string, { file: string; flip?: boolean }> = {
   yetiEat2: { file: "yeti_eating3.png" },
   npc_skier: { file: "039_skier_blue_a.png" },
   npc_board: { file: "board_sEast.png" },
+  // Pink snowplow beginners (EXE #31/#32 were mislabeled “dog”)
+  beginner: { file: "beginner_a.png" },
+  beginner2: { file: "beginner_b.png" },
   logo: { file: "053_logo.png" },
   cursor: { file: "086_cursor.png" },
-  dog: { file: "031_dog_a.png" },
-  dog2: { file: "032_dog_b.png" },
+  // Real gray dogs (EXE #33/#34 were mislabeled “rock”)
+  dog: { file: "dog_a.png" },
+  dog2: { file: "dog_b.png" },
   fire0: { file: "083_fire_a.png" },
   fire1: { file: "084_fire_b.png" },
   fire2: { file: "085_fire_c.png" },

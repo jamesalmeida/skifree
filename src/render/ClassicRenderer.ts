@@ -95,25 +95,24 @@ export class ClassicRenderer {
 
       if (n.kind === "dog") {
         const dogKey = (n.dogFrame ?? 0) < 1 ? "dog" : "dog2";
-        const flip = n.vx > 0;
+        // Face walk direction (sprites face right by default in EXE)
+        const flip = n.vx < 0;
         list.push({
           y: n.y,
           draw: () => {
             this.drawSprite(dogKey, sx, sy, { flipX: flip });
-            // pee puddle
             if (n.dogState === "pee") {
               ctx.fillStyle = "rgba(250, 220, 80, 0.55)";
               ctx.beginPath();
-              ctx.ellipse(sx + (flip ? 10 : -10), sy + 2, 8, 3, 0, 0, Math.PI * 2);
+              ctx.ellipse(sx + (flip ? -10 : 10), sy + 2, 8, 3, 0, 0, Math.PI * 2);
               ctx.fill();
             }
-            // woof bubble
             if (n.dogState === "woof") {
               ctx.fillStyle = "#fff";
               ctx.strokeStyle = "#333";
               ctx.lineWidth = 1;
-              const bx = sx + 12;
-              const by = sy - 28;
+              const bx = sx + 10;
+              const by = sy - 22;
               ctx.fillRect(bx, by, 36, 14);
               ctx.strokeRect(bx, by, 36, 14);
               ctx.fillStyle = "#111";
@@ -121,6 +120,16 @@ export class ClassicRenderer {
               ctx.fillText("Woof!", bx + 4, by + 11);
             }
           },
+        });
+        continue;
+      }
+
+      if (n.kind === "beginner") {
+        // Pink snowplow — skis wedged, slow downhill
+        const begKey = Math.floor((n.y / 20) % 2) === 0 ? "beginner" : "beginner2";
+        list.push({
+          y: n.y,
+          draw: () => this.drawSprite(begKey, sx, sy),
         });
         continue;
       }
