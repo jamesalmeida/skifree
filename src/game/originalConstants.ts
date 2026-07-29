@@ -50,9 +50,9 @@ export const VELOCITY_PX_S: ReadonlyArray<{ x: number; y: number }> = [
 
 /**
  * How fast leftover speed bleeds off on full west/east / brake.
- * Higher = snappier stop. ~6–8 ≈ a short coast then settle (original feel).
+ * Higher = snappier stop. Lower = longer coast.
  */
-export const EDGE_FRICTION = 6.5;
+export const EDGE_FRICTION = 3.8;
 
 /** Snowboarder multipliers vs skier (not in original as playable; tuned for fun). */
 export const SNOWBOARD_SPEED_MUL = 1.15;
