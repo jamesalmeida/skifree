@@ -24,18 +24,19 @@ const RAW: Record<string, { file: string; flip?: boolean }> = {
   skier_ouch: { file: "labeled_ouch.png" },
   skier_crash: { file: "labeled_hit.png" },
 
-  // --- snowboarder (from EXE extract; flip left side) ---
-  board_hardLeft: { file: "029_snowboarder_sw.png" },
-  board_left: { file: "029_snowboarder_sw.png" },
-  board_downLeft: { file: "029_snowboarder_sw.png" },
-  board_down: { file: "030_snowboarder_s.png" },
-  board_downRight: { file: "028_snowboarder_se.png" },
-  board_right: { file: "028_snowboarder_se.png" },
-  board_hardRight: { file: "028_snowboarder_se.png" },
-  board_stop: { file: "030_snowboarder_s.png" },
-  board_jump: { file: "030_snowboarder_s.png" },
-  board_ouch: { file: "labeled_ouch.png" },
-  board_crash: { file: "labeled_hit.png" },
+  // --- snowboarder (classic magenta rider + yellow board, NOT the red skier) ---
+  // Frames cropped from the original character sheet boarder strip.
+  board_hardLeft: { file: "board_sEast.png", flip: true },
+  board_left: { file: "board_sWest.png" },
+  board_downLeft: { file: "board_sWest.png" },
+  board_down: { file: "board_south.png" }, // frontal — user reference
+  board_downRight: { file: "board_sEast.png" },
+  board_right: { file: "board_sEast.png" },
+  board_hardRight: { file: "board_sWest.png", flip: true },
+  board_stop: { file: "board_south.png" },
+  board_jump: { file: "board_air.png" }, // trick / air
+  board_ouch: { file: "board_sit.png" },
+  board_crash: { file: "board_sit.png" },
 
   // --- world (EXE extract) ---
   tree: { file: "051_tree_tall.png" },
@@ -52,7 +53,7 @@ const RAW: Record<string, { file: string; flip?: boolean }> = {
   yeti2: { file: "070_yeti_run2.png" },
   yetiEat: { file: "076_yeti_eat3.png" },
   npc_skier: { file: "039_skier_blue_a.png" },
-  npc_board: { file: "028_snowboarder_se.png" },
+  npc_board: { file: "board_sEast.png" },
   logo: { file: "053_logo.png" },
   cursor: { file: "086_cursor.png" },
   dog: { file: "031_dog_a.png" },
