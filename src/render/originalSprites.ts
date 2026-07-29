@@ -52,9 +52,13 @@ const RAW: Record<string, { file: string; flip?: boolean }> = {
   slalomFlagL: { file: "023_flag_red.png" },
   slalomFlagR: { file: "026_marker_red.png" },
   finish: { file: "059_sign_finish_l.png" },
-  yeti: { file: "069_yeti_run1.png" },
-  yeti2: { file: "070_yeti_run2.png" },
-  yetiEat: { file: "076_yeti_eat3.png" },
+  // Classic abominable snow monster (sheet crops — gray body, arms up)
+  yeti: { file: "yeti_sEast1.png" },
+  yeti2: { file: "yeti_sEast2.png" },
+  yeti3: { file: "yeti_sWest1.png" },
+  yeti4: { file: "yeti_sWest2.png" },
+  yetiEat: { file: "yeti_eating1.png" },
+  yetiEat2: { file: "yeti_eating3.png" },
   npc_skier: { file: "039_skier_blue_a.png" },
   npc_board: { file: "board_sEast.png" },
   logo: { file: "053_logo.png" },
@@ -127,6 +131,7 @@ export function playerSpriteName(
     crashPhase?: "none" | "ouch" | "sit";
     airborne?: boolean;
     flipPose?: 0 | 1 | 2;
+    scootKind?: "none" | "left" | "right" | "up";
   } = {},
 ): string {
   const prefix = character === "snowboarder" ? "board_" : "skier_";
@@ -137,6 +142,10 @@ export function playerSpriteName(
     if (opts.flipPose === 2) return prefix + "flip2";
     return prefix + "jump";
   }
+  // Tiny scoot shuffle: show intermediate “step” frame while nudging
+  if (opts.scootKind === "left") return prefix + "left";
+  if (opts.scootKind === "right") return prefix + "right";
+  if (opts.scootKind === "up") return prefix + "stop";
   if (dir === "up" || dir === "stop") {
     return character === "snowboarder" ? "board_stop" : "skier_stop";
   }
@@ -171,6 +180,7 @@ export function obstacleSpriteName(type: ObstacleType): string {
 }
 
 export function yetiSpriteName(frame: number, eating: boolean): string {
-  if (eating) return "yetiEat";
-  return frame % 2 === 0 ? "yeti" : "yeti2";
+  if (eating) return frame % 2 === 0 ? "yetiEat" : "yetiEat2";
+  const run = ["yeti", "yeti2", "yeti3", "yeti4"] as const;
+  return run[frame % 4]!;
 }

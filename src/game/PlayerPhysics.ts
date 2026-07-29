@@ -1,4 +1,4 @@
-import type { CharacterType, Direction, FlipPose, Player, Vec2 } from "./types";
+import type { CharacterType, Direction, FlipPose, Player, ScootKind, Vec2 } from "./types";
 import {
   CRASH_MS,
   DIR_ORDER,
@@ -20,17 +20,18 @@ export interface SteerInput {
   mouseDx: number | null;
   leftPressed: boolean;
   rightPressed: boolean;
-  /** Space / mouse click — jump (ground) or unused in air */
+  /** Space / click — jump on ground, backflip tick in air */
   jumpPressed: boolean;
-  /** Arrow up just pressed — backflip tick while airborne */
+  /** ↑ just pressed — backflip tick in air; reverse scoot when stopped */
   upPressed: boolean;
 }
 
 let turnCooldown = 0;
 
-/** Sideways scoot impulse when already fully edged and press again (px/s burst). */
-const SCOOT_VX = 95;
-const SCOOT_DURATION = 0.14;
+const SCOOT_VX = 100;
+const SCOOT_VY_UP = -55; // reverse uphill (negative y)
+const SCOOT_DURATION = 0.16;
+const SCOOT_ANIM = 0.18;
 
 function dirIndex(d: Direction): number {
   const i = (DIR_ORDER as readonly string[]).indexOf(d);
@@ -68,6 +69,21 @@ function velocityFor(dir: Direction, character: CharacterType): Vec2 {
   return { x: base.x * side, y: base.y * m };
 }
 
+function startScoot(player: Player, kind: ScootKind, vx: number, vy: number) {
+  player.scootKind = kind;
+  player.scootTimer = SCOOT_ANIM;
+  player.vx = vx;
+  player.vy = vy;
+}
+
+function advanceFlip(player: Player) {
+  player.flipPresses += 1;
+  player.flipPose = (player.flipPresses % 3) as FlipPose;
+  if (player.flipPresses > 0 && player.flipPresses % 3 === 0) {
+    player.flipsThisAir += 1;
+  }
+}
+
 export function createPlayer(character: CharacterType): Player {
   turnCooldown = 0;
   return {
@@ -84,11 +100,21 @@ export function createPlayer(character: CharacterType): Player {
     flipPresses: 0,
     crashPhase: "none",
     flipsThisAir: 0,
+    scootTimer: 0,
+    scootKind: "none",
   };
 }
 
 export function updatePlayer(player: Player, input: SteerInput, dt: number) {
-  // ── Crash: ouch (buried) → sit ──
+  if (player.scootTimer > 0) {
+    player.scootTimer -= dt;
+    if (player.scootTimer <= 0) {
+      player.scootTimer = 0;
+      player.scootKind = "none";
+    }
+  }
+
+  // ── Crash: ouch → sit ──
   if (player.crashTimer > 0) {
     player.crashTimer -= dt;
     player.vx *= Math.pow(0.05, dt);
@@ -96,7 +122,6 @@ export function updatePlayer(player: Player, input: SteerInput, dt: number) {
     player.x += player.vx * dt;
     player.y += player.vy * dt;
 
-    // First ~45% of crash = ouch (under snow), rest = sit
     const total = CRASH_MS / 1000;
     const elapsed = total - player.crashTimer;
     player.crashPhase = elapsed < total * 0.42 ? "ouch" : "sit";
@@ -113,63 +138,73 @@ export function updatePlayer(player: Player, input: SteerInput, dt: number) {
 
   if (player.invuln > 0) player.invuln -= dt;
 
-  // ── Airborne: steer a little, backflips on ↑, land check ──
+  // ── Airborne ──
   if (player.airborne > 0) {
     player.airborne -= dt;
 
-    // Light air steering
-    if (input.left) player.vx -= 90 * dt;
-    if (input.right) player.vx += 90 * dt;
+    // OG: always fly straight down once airborne (no air steering for angle)
+    player.vx = 0;
+    player.vy = Math.max(player.vy, JUMP_SPEED_PX * 0.85);
 
-    // Each ↑ press advances backflip pose (3 presses = full flip)
-    if (input.upPressed) {
-      player.flipPresses += 1;
-      player.flipPose = (player.flipPresses % 3) as FlipPose;
-      if (player.flipPresses > 0 && player.flipPresses % 3 === 0) {
-        player.flipsThisAir += 1;
-      }
+    // Space/click OR ↑ advances backflip
+    if (input.upPressed || input.jumpPressed) {
+      advanceFlip(player);
     }
 
     player.x += player.vx * dt;
     player.y += player.vy * dt;
 
     if (player.airborne <= 0) {
-      // Landing: must be upright (flipPose 0) or crash
       const upright = player.flipPose === 0;
       player.airborne = 0;
       if (!upright) {
         crashPlayer(player);
         return;
       }
-      // Style for completed flips
       player.flipPose = 0;
       player.flipPresses = 0;
-      // Restore ground dir from velocity
-      if (Math.abs(player.vx) < 20) player.dir = "down";
-      else if (player.vx < 0) player.dir = "downLeft";
-      else player.dir = "downRight";
+      // OG: always land going straight down
+      player.dir = "down";
+      player.vx = 0;
+      const ground = velocityFor("down", player.character);
+      player.vy = ground.y;
     }
     return;
   }
 
-  // Ground jump (space / click) — free hop; ramps also call launchPlayer
-  if (input.jumpPressed && player.airborne <= 0) {
+  // Ground jump — always launches straight down
+  if (input.jumpPressed) {
     launchPlayer(player, player.character === "snowboarder" ? 1.1 : 1);
     return;
   }
 
   let idx = dirIndex(player.dir === "stop" || player.dir === "up" ? "down" : player.dir);
   const board = player.character === "snowboarder";
-  const nearlyStopped = Math.hypot(player.vx, player.vy) < 12;
+  const nearlyStopped = Math.hypot(player.vx, player.vy) < 14;
 
-  // Edge scoot: fully west/east, stopped, press same side again → nudge
-  if (nearlyStopped && player.dir === "hardLeft" && input.leftPressed) {
-    player.vx = -SCOOT_VX;
-    player.vy = 0;
-    // brief scoot handled by velocity this frame + friction next frames
-  } else if (nearlyStopped && player.dir === "hardRight" && input.rightPressed) {
-    player.vx = SCOOT_VX;
-    player.vy = 0;
+  // ── Scoots when fully stopped ──
+  if (nearlyStopped && player.scootTimer <= 0) {
+    // Side scoot at full edge
+    if (player.dir === "hardLeft" && input.leftPressed) {
+      startScoot(player, "left", -SCOOT_VX, 0);
+    } else if (player.dir === "hardRight" && input.rightPressed) {
+      startScoot(player, "right", SCOOT_VX, 0);
+    }
+    // Reverse scoot: stopped (any facing that isn't moving) + ↑
+    // Classic: fully edged or braked stop, press up → shuffle back uphill
+    else if (
+      input.upPressed &&
+      (player.dir === "stop" ||
+        player.dir === "hardLeft" ||
+        player.dir === "hardRight" ||
+        (player.dir === "down" && nearlyStopped))
+    ) {
+      // Prefer keeping hard edge facing if already there; else stop pose
+      if (player.dir !== "hardLeft" && player.dir !== "hardRight") {
+        player.dir = "stop";
+      }
+      startScoot(player, "up", 0, SCOOT_VY_UP);
+    }
   }
 
   const keyTurn = input.left || input.right || input.leftPressed || input.rightPressed;
@@ -178,7 +213,6 @@ export function updatePlayer(player: Player, input: SteerInput, dt: number) {
 
   if (keyTurn) {
     if (input.leftPressed) {
-      // Don't step past hardLeft — scoot handled above
       if (idx > 0) {
         idx = Math.max(0, idx - 1);
         turnCooldown = TURN_STEP_MS / 1000;
@@ -207,7 +241,9 @@ export function updatePlayer(player: Player, input: SteerInput, dt: number) {
     else if (idx > 3) idx--;
   }
 
-  if (input.up && !input.down) {
+  // Ground ↑: edge toward stop / reverse already handled as scoot when stopped.
+  // While moving, ↑ still brakes toward hard edges.
+  if (input.up && !input.down && !nearlyStopped) {
     if (idx === 3) {
       player.dir = board ? "down" : "stop";
       if (!board) {
@@ -226,21 +262,21 @@ export function updatePlayer(player: Player, input: SteerInput, dt: number) {
     }
   }
 
-  if (player.dir === "stop") {
+  if (player.dir === "stop" && player.scootTimer <= 0) {
     if (input.down && !input.left && !input.right) idx = 3;
     else if (keyTurn) {
-      /* idx already stepped */
+      /* idx stepped */
     } else if (!keyAny && input.mouseDx !== null) idx = dirFromMouseDx(input.mouseDx);
   }
 
-  player.dir = clampDir(idx);
-
-  if (board && player.dir === "stop") {
-    player.dir = "down";
+  // Don't overwrite facing mid-scoot animation
+  if (player.scootTimer <= 0) {
+    player.dir = clampDir(idx);
+    if (board && player.dir === "stop") player.dir = "down";
   }
 
   const target = velocityFor(player.dir, player.character);
-  const scrub = board && input.up && !input.down && dirIndex(player.dir) === 3;
+  const scrub = board && input.up && !input.down && dirIndex(player.dir) === 3 && !nearlyStopped;
   const aim = scrub ? { x: target.x * 0.3, y: target.y * 0.35 } : target;
   const edgeStop =
     player.dir === "hardLeft" ||
@@ -248,23 +284,24 @@ export function updatePlayer(player: Player, input: SteerInput, dt: number) {
     player.dir === "stop" ||
     scrub;
 
-  // Scoot burst: don't immediately kill sideways nudge
-  const scooting =
-    (player.dir === "hardLeft" || player.dir === "hardRight") &&
-    Math.abs(player.vx) > 20 &&
-    Math.abs(player.vy) < 8;
+  const scooting = player.scootTimer > 0 || player.scootKind !== "none";
 
-  if (edgeStop && !scooting) {
+  if (scooting && player.scootTimer > 0) {
+    // Decay scoot impulse
+    player.vx *= Math.exp(-dt / SCOOT_DURATION);
+    if (player.scootKind === "up") {
+      player.vy *= Math.exp(-dt / SCOOT_DURATION);
+    } else {
+      player.vy = 0;
+    }
+    if (Math.abs(player.vx) < 6) player.vx = 0;
+    if (Math.abs(player.vy) < 6) player.vy = 0;
+  } else if (edgeStop) {
     const k = 1 - Math.exp(-EDGE_FRICTION * dt);
     player.vx += (aim.x - player.vx) * k;
     player.vy += (aim.y - player.vy) * k;
     if (Math.abs(player.vx) < 1.5) player.vx = 0;
     if (Math.abs(player.vy) < 1.5) player.vy = 0;
-  } else if (scooting) {
-    // Friction on scoot so it dies after a short hop
-    player.vx *= Math.exp(-dt / SCOOT_DURATION);
-    player.vy = 0;
-    if (Math.abs(player.vx) < 8) player.vx = 0;
   } else {
     player.vx = aim.x;
     player.vy = aim.y;
@@ -272,6 +309,13 @@ export function updatePlayer(player: Player, input: SteerInput, dt: number) {
 
   player.x += player.vx * dt;
   player.y += player.vy * dt;
+
+  // Soft floor on y so reverse scoot doesn't go above start forever
+  // (world grows downward only; y can be slightly negative near start)
+  if (player.y < -80) {
+    player.y = -80;
+    player.vy = Math.max(0, player.vy);
+  }
 
   const bound = 2000;
   if (player.x < -bound) {
@@ -294,24 +338,21 @@ export function crashPlayer(player: Player, duration = CRASH_MS / 1000) {
   player.flipPose = 0;
   player.flipPresses = 0;
   player.flipsThisAir = 0;
+  player.scootTimer = 0;
+  player.scootKind = "none";
 }
 
+/** Always launches straight down the fall line (OG behavior). */
 export function launchPlayer(player: Player, boost = 1) {
   if (player.crashTimer > 0) return;
-  player.airborne = (JUMP_MS / 1000) * (0.85 + 0.25 * boost);
+  player.airborne = (JUMP_MS / 1000) * (0.9 + 0.25 * boost);
   player.flipPose = 0;
   player.flipPresses = 0;
   player.flipsThisAir = 0;
+  player.scootTimer = 0;
+  player.scootKind = "none";
 
-  const target = JUMP_SPEED_PX * boost;
-  const mag = Math.hypot(player.vx, player.vy);
-  if (mag < 8 || player.dir === "down" || Math.abs(player.vx) < player.vy * 0.25) {
-    player.vx = 0;
-    player.vy = target;
-    player.dir = "down";
-  } else {
-    const s = target / mag;
-    player.vx *= s;
-    player.vy *= s;
-  }
+  player.vx = 0;
+  player.vy = JUMP_SPEED_PX * boost;
+  player.dir = "down";
 }

@@ -155,9 +155,15 @@ export class ClassicRenderer {
         crashPhase: p.crashPhase,
         airborne: p.airborne > 0,
         flipPose: p.flipPose,
+        scootKind: p.scootTimer > 0 ? p.scootKind : "none",
       });
-      const bounce =
-        p.airborne > 0 ? -16 * Math.sin(Math.min(1, p.airborne / 0.75) * Math.PI) : 0;
+      let bounce = 0;
+      if (p.airborne > 0) {
+        bounce = -16 * Math.sin(Math.min(1, p.airborne / 0.75) * Math.PI);
+      } else if (p.scootTimer > 0) {
+        // Tiny hop during scoot shuffle
+        bounce = -5 * Math.sin((p.scootTimer / 0.18) * Math.PI);
+      }
       list.push({
         y: p.y + 0.5,
         draw: () => {

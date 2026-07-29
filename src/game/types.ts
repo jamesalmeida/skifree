@@ -71,6 +71,9 @@ export interface NPC {
   dogFrame?: number;
 }
 
+/** Brief shuffle animation after edge / reverse scoot */
+export type ScootKind = "none" | "left" | "right" | "up";
+
 export interface Player {
   character: CharacterType;
   x: number;
@@ -83,11 +86,14 @@ export interface Player {
   invuln: number;
   /** Backflip animation frame while airborne */
   flipPose: FlipPose;
-  /** Total up-presses while in this air time (3 = full flip) */
+  /** Total flip-button presses while in this air time (3 = full flip) */
   flipPresses: number;
   crashPhase: CrashPhase;
   /** Completed backflips this air (for style / double-flip) */
   flipsThisAir: number;
+  /** >0 while playing scoot shuffle animation */
+  scootTimer: number;
+  scootKind: ScootKind;
 }
 
 export interface GameConfig {
