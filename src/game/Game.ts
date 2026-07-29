@@ -40,9 +40,6 @@ export class Game {
   input: Input;
   private lastTs = 0;
   private onChange: (() => void) | null = null;
-  private mouseMoved = false;
-  private lastMouseX = 0;
-  private lastMouseY = 0;
 
   constructor(canvas: HTMLCanvasElement, config: GameConfig) {
     this.canvas = canvas;
@@ -66,7 +63,6 @@ export class Game {
     this.gatesPassed = 0;
     this.message = null;
     this.messageTimer = 0;
-    this.mouseMoved = false;
     this.state = "playing";
     this.lastTs = performance.now();
     this.notify();
@@ -107,18 +103,6 @@ export class Game {
   }
 
   tick(now: number) {
-    // Track mouse motion (ignore static cursor after menu click)
-    if (
-      this.input.mouseInCanvas &&
-      (this.input.mouseX !== this.lastMouseX || this.input.mouseY !== this.lastMouseY)
-    ) {
-      if (this.lastMouseX !== 0 || this.lastMouseY !== 0) {
-        this.mouseMoved = true;
-      }
-      this.lastMouseX = this.input.mouseX;
-      this.lastMouseY = this.input.mouseY;
-    }
-
     if (this.input.wasPressed("f2") || this.input.wasPressed("r")) {
       if (this.state !== "menu") this.start();
     }
@@ -166,6 +150,27 @@ export class Game {
   }
 
   private readSteer(): SteerInput {
+    const scheme = this.config.controls;
+
+    if (scheme === "mouse") {
+      // Classic SkiFree: cursor vs skier center sets facing. No key steering.
+      let mouseDx: number | null = null;
+      if (this.input.mouseInCanvas) {
+        const originX = this.canvas.clientWidth / 2;
+        mouseDx = this.input.mouseX - originX;
+      }
+      return {
+        left: false,
+        right: false,
+        up: false,
+        down: false,
+        mouseDx,
+        leftPressed: false,
+        rightPressed: false,
+      };
+    }
+
+    // Keyboard-only: arrows / WASD / numpad
     const left =
       this.input.isDown("arrowleft") ||
       this.input.isDown("a") ||
@@ -208,15 +213,15 @@ export class Game {
       this.input.wasPressed("numpad6") ||
       this.input.wasPressed("6");
 
-    // Mouse only after real movement; keyboard always wins when held
-    let mouseDx: number | null = null;
-    if (this.mouseMoved && this.input.mouseInCanvas && !left && !right) {
-      const originX = this.canvas.clientWidth / 2;
-      // Approximate skier screen x = center (camera follows player.x)
-      mouseDx = this.input.mouseX - originX;
-    }
-
-    return { left, right, up, down, mouseDx, leftPressed, rightPressed };
+    return {
+      left,
+      right,
+      up,
+      down,
+      mouseDx: null,
+      leftPressed,
+      rightPressed,
+    };
   }
 
   private handleCollisions() {

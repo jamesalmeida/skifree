@@ -1,6 +1,8 @@
 export type GraphicsMode = "classic" | "3d";
 export type CharacterType = "skier" | "snowboarder";
 export type GameMode = "slalom" | "freestyle" | "tree";
+/** How the player steers during a run */
+export type ControlScheme = "keyboard" | "mouse";
 export type GameState = "menu" | "playing" | "paused" | "crashed" | "eaten" | "finished";
 
 /** Discrete ski directions (original 7-way + stop/up). */
@@ -71,6 +73,7 @@ export interface GameConfig {
   mode: GameMode;
   character: CharacterType;
   graphics: GraphicsMode;
+  controls: ControlScheme;
 }
 
 export interface GameSnapshot {

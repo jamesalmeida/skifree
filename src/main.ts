@@ -1,6 +1,6 @@
 import "./style.css";
 import { Game } from "./game/Game";
-import type { CharacterType, GameMode, GraphicsMode } from "./game/types";
+import type { CharacterType, ControlScheme, GameMode, GraphicsMode } from "./game/types";
 import { SHOW_DIR_DEBUG } from "./game/originalConstants";
 import { ClassicRenderer } from "./render/ClassicRenderer";
 import { Renderer3D } from "./render/Renderer3D";
@@ -31,11 +31,15 @@ const gameoverTitle = document.getElementById("gameover-title")!;
 const gameoverMsg = document.getElementById("gameover-msg")!;
 const gameoverStats = document.getElementById("gameover-stats")!;
 
+const CONTROLS_KEY = "skifree-controls";
+
 let mode: GameMode = "slalom";
 let character: CharacterType = "skier";
 let graphics: GraphicsMode = "classic";
+let controls: ControlScheme =
+  localStorage.getItem(CONTROLS_KEY) === "mouse" ? "mouse" : "keyboard";
 
-const game = new Game(canvas, { mode, character, graphics });
+const game = new Game(canvas, { mode, character, graphics, controls });
 const classic = new ClassicRenderer(canvas);
 const modern = new Renderer3D(canvas3d);
 
@@ -69,6 +73,34 @@ bindOptionRow<CharacterType>("char-row", "char", (v) => {
 bindOptionRow<GraphicsMode>("gfx-row", "gfx", (v) => {
   graphics = v;
 });
+
+const controlsHint = document.getElementById("controls-hint")!;
+const controlsHelp = document.getElementById("controls-help")!;
+
+function applyControlsUi(scheme: ControlScheme) {
+  controls = scheme;
+  localStorage.setItem(CONTROLS_KEY, scheme);
+  document.querySelectorAll("#controls-row .opt").forEach((b) => {
+    b.classList.toggle("active", b.getAttribute("data-controls") === scheme);
+  });
+  if (scheme === "mouse") {
+    controlsHint.textContent =
+      "Move the pointer left/right of the skier to carve (classic SkiFree).";
+    controlsHelp.innerHTML = `
+      <p>Mouse left/right of skier · steer (classic)</p>
+      <p><kbd>F2</kbd> restart · <kbd>F3</kbd> / <kbd>P</kbd> pause · <kbd>G</kbd> graphics · <kbd>C</kbd> character</p>`;
+  } else {
+    controlsHint.textContent = "Arrow keys / WASD / numpad to steer.";
+    controlsHelp.innerHTML = `
+      <p><kbd>←</kbd><kbd>→</kbd> steer · <kbd>↑</kbd> brake · <kbd>↓</kbd> tuck</p>
+      <p><kbd>F2</kbd> restart · <kbd>F3</kbd> / <kbd>P</kbd> pause · <kbd>G</kbd> graphics · <kbd>C</kbd> character</p>`;
+  }
+}
+
+bindOptionRow<ControlScheme>("controls-row", "controls", (v) => {
+  applyControlsUi(v);
+});
+applyControlsUi(controls);
 
 function applyDirDebugVisibility() {
   const el = document.querySelector("#stats .dir-debug") as HTMLElement | null;
@@ -153,7 +185,7 @@ game.setOnChange(syncUi);
 
 document.getElementById("start-btn")!.addEventListener("click", () => {
   applyGraphics(graphics);
-  game.start({ mode, character, graphics });
+  game.start({ mode, character, graphics, controls });
   syncUi();
 });
 
@@ -169,7 +201,7 @@ document.getElementById("menu-btn")!.addEventListener("click", () => {
 
 document.getElementById("retry-btn")!.addEventListener("click", () => {
   applyGraphics(graphics);
-  game.start({ mode, character, graphics });
+  game.start({ mode, character, graphics, controls });
   syncUi();
 });
 
