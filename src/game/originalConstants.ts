@@ -39,14 +39,20 @@ export const DIR_ORDER = [
  * ~5–6 px/frame at 30 Hz for full tuck.
  */
 export const VELOCITY_PX_S: ReadonlyArray<{ x: number; y: number }> = [
-  { x: 0, y: 0 }, // west — full edge stop (original)
+  { x: 0, y: 0 }, // west — coasts to a stop (see EDGE_FRICTION)
   { x: -70, y: 55 }, // wsWest — slow carve
   { x: -55, y: 130 }, // sWest
   { x: 0, y: 175 }, // south
   { x: 55, y: 130 }, // sEast
   { x: 70, y: 55 }, // esEast — slow carve
-  { x: 0, y: 0 }, // east — full edge stop (original)
+  { x: 0, y: 0 }, // east — coasts to a stop (see EDGE_FRICTION)
 ];
+
+/**
+ * How fast leftover speed bleeds off on full west/east / brake.
+ * Higher = snappier stop. ~6–8 ≈ a short coast then settle (original feel).
+ */
+export const EDGE_FRICTION = 6.5;
 
 /** Snowboarder multipliers vs skier (not in original as playable; tuned for fun). */
 export const SNOWBOARD_SPEED_MUL = 1.15;

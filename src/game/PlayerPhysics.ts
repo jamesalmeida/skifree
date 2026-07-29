@@ -2,6 +2,7 @@ import type { CharacterType, Direction, Player, Vec2 } from "./types";
 import {
   CRASH_MS,
   DIR_ORDER,
+  EDGE_FRICTION,
   JUMP_MS,
   MOUSE_DIR_THRESHOLDS,
   SNOWBOARD_EDGE_MUL,
@@ -185,13 +186,29 @@ export function updatePlayer(player: Player, input: SteerInput, dt: number) {
     player.dir = "down";
   }
 
-  // Original SkiFree uses discrete per-direction speeds (not smooth lerp).
-  // Snap velocity to the table so facing and movement never disagree.
+  // Active ski dirs: snap to the discrete speed table (original feel).
+  // Full edge (west/east) and brake: keep leftover momentum and bleed it
+  // off with friction so you coast a bit then settle — not an instant halt.
   const target = velocityFor(player.dir, player.character);
   const scrub = board && input.up && !input.down && dirIndex(player.dir) === 3;
   const aim = scrub ? { x: target.x * 0.3, y: target.y * 0.35 } : target;
-  player.vx = aim.x;
-  player.vy = aim.y;
+  const edgeStop =
+    player.dir === "hardLeft" ||
+    player.dir === "hardRight" ||
+    player.dir === "stop" ||
+    scrub;
+
+  if (edgeStop) {
+    // Exponential decay toward zero (and any tiny aim if scrubbing)
+    const k = 1 - Math.exp(-EDGE_FRICTION * dt);
+    player.vx += (aim.x - player.vx) * k;
+    player.vy += (aim.y - player.vy) * k;
+    if (Math.abs(player.vx) < 1.5) player.vx = 0;
+    if (Math.abs(player.vy) < 1.5) player.vy = 0;
+  } else {
+    player.vx = aim.x;
+    player.vy = aim.y;
+  }
 
   player.x += player.vx * dt;
   player.y += player.vy * dt;
