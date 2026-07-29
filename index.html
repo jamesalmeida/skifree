@@ -79,8 +79,16 @@
           <h2 id="settings-title">Game feel</h2>
           <button type="button" id="settings-close" class="settings-x" aria-label="Close">×</button>
         </div>
-        <p class="settings-intro">Tweaks apply immediately and save in this browser. All knobs live in <code>originalConstants.ts</code>.</p>
-        <div id="settings-fields" class="settings-fields"></div>
+        <div class="settings-tabs" role="tablist">
+          <button type="button" id="tab-feel" class="settings-tab active" role="tab">Game feel</button>
+          <button type="button" id="tab-sprites" class="settings-tab" role="tab">Sprites</button>
+        </div>
+        <div id="settings-feel" class="settings-tab-panel" role="tabpanel">
+          <p class="settings-intro">Tweaks apply live and save in this browser. Source: <code>originalConstants.ts</code>.</p>
+        </div>
+        <div id="settings-sprites" class="settings-tab-panel hidden" role="tabpanel">
+          <p class="settings-intro">Logical keys, source files, and looping animations. Open after sprites finish loading.</p>
+        </div>
         <div class="settings-footer">
           <button type="button" id="settings-reset" class="secondary">Reset defaults</button>
         </div>

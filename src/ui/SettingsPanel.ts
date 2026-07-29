@@ -1,11 +1,15 @@
 import {
-  DEFAULT_SETTINGS,
   settings,
   applySettings,
   saveSettings,
   resetSettings,
   type TunableSettings,
 } from "../game/originalConstants";
+import {
+  listSpriteCatalog,
+  getOriginalSprite,
+  SPRITE_ANIMATIONS,
+} from "../render/originalSprites";
 
 type Field = {
   key: keyof TunableSettings;
@@ -15,6 +19,7 @@ type Field = {
   max: number;
   step: number;
   kind?: "number" | "bool";
+  group: "motion" | "timing" | "world" | "input" | "debug";
 };
 
 const FIELDS: Field[] = [
@@ -25,6 +30,7 @@ const FIELDS: Field[] = [
     min: 0.5,
     max: 12,
     step: 0.1,
+    group: "motion",
   },
   {
     key: "southSpeedMs",
@@ -33,6 +39,7 @@ const FIELDS: Field[] = [
     min: 10,
     max: 30,
     step: 0.5,
+    group: "motion",
   },
   {
     key: "jumpSpeedMs",
@@ -41,6 +48,7 @@ const FIELDS: Field[] = [
     min: 18,
     max: 40,
     step: 0.5,
+    group: "motion",
   },
   {
     key: "carveSpeedScale",
@@ -49,70 +57,7 @@ const FIELDS: Field[] = [
     min: 0.3,
     max: 1.8,
     step: 0.05,
-  },
-  {
-    key: "turnStepMs",
-    label: "Turn step (ms)",
-    hint: "Delay between direction steps while holding ←/→",
-    min: 30,
-    max: 200,
-    step: 5,
-  },
-  {
-    key: "crashMs",
-    label: "Crash time (ms)",
-    hint: "How long you sit after hitting something",
-    min: 400,
-    max: 3000,
-    step: 50,
-  },
-  {
-    key: "jumpMs",
-    label: "Jump air (ms)",
-    hint: "Air time off ramps",
-    min: 300,
-    max: 2000,
-    step: 50,
-  },
-  {
-    key: "yetiDistanceM",
-    label: "Yeti distance (m)",
-    hint: "When the monster shows up",
-    min: 500,
-    max: 5000,
-    step: 100,
-  },
-  {
-    key: "pixelsPerMetre",
-    label: "Pixels / metre",
-    hint: "Distance & speed HUD scale",
-    min: 8,
-    max: 32,
-    step: 1,
-  },
-  {
-    key: "classicScale",
-    label: "Pixel scale",
-    hint: "Classic 2D sprite draw scale",
-    min: 1,
-    max: 4,
-    step: 1,
-  },
-  {
-    key: "mouseDeadZone",
-    label: "Mouse dead-zone",
-    hint: "Center px that still count as south",
-    min: 0,
-    max: 80,
-    step: 1,
-  },
-  {
-    key: "mouseHardZone",
-    label: "Mouse hard edge",
-    hint: "Px from center for full west/east",
-    min: 40,
-    max: 300,
-    step: 4,
+    group: "motion",
   },
   {
     key: "snowboardSpeedMul",
@@ -121,6 +66,7 @@ const FIELDS: Field[] = [
     min: 0.8,
     max: 1.8,
     step: 0.05,
+    group: "motion",
   },
   {
     key: "snowboardEdgeMul",
@@ -129,6 +75,79 @@ const FIELDS: Field[] = [
     min: 0.5,
     max: 1.2,
     step: 0.05,
+    group: "motion",
+  },
+  {
+    key: "turnStepMs",
+    label: "Turn step (ms)",
+    hint: "Delay between direction steps while holding ←/→",
+    min: 30,
+    max: 200,
+    step: 5,
+    group: "timing",
+  },
+  {
+    key: "crashMs",
+    label: "Crash time (ms)",
+    hint: "How long you sit after hitting something",
+    min: 400,
+    max: 3000,
+    step: 50,
+    group: "timing",
+  },
+  {
+    key: "jumpMs",
+    label: "Jump air (ms)",
+    hint: "Air time off ramps / free jump",
+    min: 300,
+    max: 2000,
+    step: 50,
+    group: "timing",
+  },
+  {
+    key: "yetiDistanceM",
+    label: "Yeti distance (m)",
+    hint: "When the monster shows up",
+    min: 500,
+    max: 5000,
+    step: 100,
+    group: "world",
+  },
+  {
+    key: "pixelsPerMetre",
+    label: "Pixels / metre",
+    hint: "Distance & speed HUD scale",
+    min: 8,
+    max: 32,
+    step: 1,
+    group: "world",
+  },
+  {
+    key: "classicScale",
+    label: "Pixel scale",
+    hint: "Classic 2D sprite draw scale",
+    min: 1,
+    max: 4,
+    step: 1,
+    group: "world",
+  },
+  {
+    key: "mouseDeadZone",
+    label: "Mouse dead-zone",
+    hint: "Center px that still count as south",
+    min: 0,
+    max: 80,
+    step: 1,
+    group: "input",
+  },
+  {
+    key: "mouseHardZone",
+    label: "Mouse hard edge",
+    hint: "Px from center for full west/east",
+    min: 40,
+    max: 300,
+    step: 4,
+    group: "input",
   },
   {
     key: "showDirDebug",
@@ -138,69 +157,195 @@ const FIELDS: Field[] = [
     max: 1,
     step: 1,
     kind: "bool",
+    group: "debug",
   },
 ];
+
+const GROUP_LABELS: Record<Field["group"], string> = {
+  motion: "Motion & speed",
+  timing: "Timing",
+  world: "World & display",
+  input: "Mouse",
+  debug: "HUD",
+};
+
+type TabId = "feel" | "sprites";
 
 export function initSettingsPanel(onChange?: () => void) {
   const gear = document.getElementById("settings-gear")!;
   const panel = document.getElementById("settings-panel")!;
-  const body = document.getElementById("settings-fields")!;
   const closeBtn = document.getElementById("settings-close")!;
   const resetBtn = document.getElementById("settings-reset")!;
   const backdrop = document.getElementById("settings-backdrop")!;
+  const feelRoot = document.getElementById("settings-feel")!;
+  const spritesRoot = document.getElementById("settings-sprites")!;
+  const tabFeel = document.getElementById("tab-feel")!;
+  const tabSprites = document.getElementById("tab-sprites")!;
+  const titleEl = document.getElementById("settings-title")!;
 
-  body.innerHTML = "";
-  for (const f of FIELDS) {
-    const row = document.createElement("div");
-    row.className = "settings-row";
-    if (f.kind === "bool") {
-      row.innerHTML = `
-        <div class="settings-row-head">
-          <label for="set-${f.key}">${f.label}</label>
-          <input type="checkbox" id="set-${f.key}" ${settings[f.key] ? "checked" : ""} />
-        </div>
-        <p class="settings-hint">${f.hint}</p>`;
-      const input = row.querySelector("input") as HTMLInputElement;
-      input.addEventListener("change", () => {
-        settings.showDirDebug = input.checked;
-        saveSettings();
-        onChange?.();
-      });
-    } else {
-      const val = Number(settings[f.key]);
-      row.innerHTML = `
-        <div class="settings-row-head">
-          <label for="set-${f.key}">${f.label}</label>
-          <span class="settings-val" id="set-val-${f.key}">${formatVal(val, f.step)}</span>
-        </div>
-        <input type="range" id="set-${f.key}" min="${f.min}" max="${f.max}" step="${f.step}" value="${val}" />
-        <p class="settings-hint">${f.hint}</p>`;
-      const input = row.querySelector("input") as HTMLInputElement;
-      const span = row.querySelector(`#set-val-${f.key}`) as HTMLElement;
-      input.addEventListener("input", () => {
-        const v = Number(input.value);
-        span.textContent = formatVal(v, f.step);
-        setNumeric(f.key, v);
-        applySettings();
-        onChange?.();
-      });
-      input.addEventListener("change", () => {
-        saveSettings();
-      });
+  let activeTab: TabId = "feel";
+  let animRaf = 0;
+  let animRunning = false;
+
+  // ── Build Game feel tab ──
+  feelRoot.innerHTML = "";
+  const groups = (["motion", "timing", "world", "input", "debug"] as const).filter((g) =>
+    FIELDS.some((f) => f.group === g),
+  );
+  for (const g of groups) {
+    const section = document.createElement("section");
+    section.className = "settings-section";
+    section.innerHTML = `<h3 class="settings-section-title">${GROUP_LABELS[g]}</h3>`;
+    const body = document.createElement("div");
+    body.className = "settings-section-body";
+    for (const f of FIELDS.filter((x) => x.group === g)) {
+      body.appendChild(buildFieldRow(f, onChange));
     }
-    body.appendChild(row);
+    section.appendChild(body);
+    feelRoot.appendChild(section);
   }
+
+  // ── Build Sprites tab (filled on open so preload is done) ──
+  function buildSpriteBrowser() {
+    spritesRoot.innerHTML = "";
+
+    // Animations
+    const animSection = document.createElement("section");
+    animSection.className = "settings-section";
+    animSection.innerHTML = `<h3 class="settings-section-title">Animations</h3>
+      <p class="settings-hint settings-section-hint">Cycling multi-frame sets used in-game.</p>`;
+    const animGrid = document.createElement("div");
+    animGrid.className = "sprite-grid sprite-grid-anim";
+    for (const anim of SPRITE_ANIMATIONS) {
+      const card = document.createElement("div");
+      card.className = "sprite-card sprite-card-anim";
+      card.dataset.animId = anim.id;
+      card.innerHTML = `
+        <canvas class="sprite-canvas" width="96" height="96"></canvas>
+        <div class="sprite-meta">
+          <div class="sprite-key">${anim.label}</div>
+          <div class="sprite-file">${anim.keys.join(" → ")}</div>
+          <div class="sprite-dim">${anim.fps} fps · ${anim.keys.length} frames</div>
+        </div>`;
+      animGrid.appendChild(card);
+    }
+    animSection.appendChild(animGrid);
+    spritesRoot.appendChild(animSection);
+
+    // All keys
+    const cat = listSpriteCatalog();
+    const allSection = document.createElement("section");
+    allSection.className = "settings-section";
+    allSection.innerHTML = `<h3 class="settings-section-title">All sprites (${cat.length})</h3>
+      <p class="settings-hint settings-section-hint">Logical key → source file. Flipped = horizontal mirror.</p>`;
+    const grid = document.createElement("div");
+    grid.className = "sprite-grid";
+    for (const e of cat) {
+      const card = document.createElement("div");
+      card.className = "sprite-card" + (e.loaded ? "" : " sprite-missing");
+      card.innerHTML = `
+        <canvas class="sprite-canvas" width="72" height="72" data-key="${e.key}"></canvas>
+        <div class="sprite-meta">
+          <div class="sprite-key">${e.key}${e.flipped ? " ⟷" : ""}</div>
+          <div class="sprite-file">${e.file}</div>
+          <div class="sprite-dim">${e.loaded ? `${e.width}×${e.height}` : "missing"}</div>
+        </div>`;
+      grid.appendChild(card);
+      // static draw
+      const canvas = card.querySelector("canvas") as HTMLCanvasElement;
+      drawSpriteOnCanvas(canvas, e.key);
+    }
+    allSection.appendChild(grid);
+    spritesRoot.appendChild(allSection);
+  }
+
+  function drawSpriteOnCanvas(canvas: HTMLCanvasElement, key: string) {
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    ctx.imageSmoothingEnabled = false;
+    // checker bg
+    const s = 8;
+    for (let y = 0; y < canvas.height; y += s) {
+      for (let x = 0; x < canvas.width; x += s) {
+        ctx.fillStyle = (x / s + y / s) % 2 === 0 ? "#e2e8f0" : "#cbd5e0";
+        ctx.fillRect(x, y, s, s);
+      }
+    }
+    const img = getOriginalSprite(key);
+    if (!img) {
+      ctx.fillStyle = "#a0aec0";
+      ctx.font = "10px sans-serif";
+      ctx.fillText("?", canvas.width / 2 - 4, canvas.height / 2 + 4);
+      return;
+    }
+    const scale = Math.min(
+      (canvas.width - 8) / img.width,
+      (canvas.height - 8) / img.height,
+      4,
+    );
+    const dw = Math.max(1, Math.floor(img.width * scale));
+    const dh = Math.max(1, Math.floor(img.height * scale));
+    const dx = Math.floor((canvas.width - dw) / 2);
+    const dy = Math.floor((canvas.height - dh) / 2);
+    ctx.drawImage(img, dx, dy, dw, dh);
+  }
+
+  function tickAnims(t: number) {
+    if (!animRunning) return;
+    const cards = spritesRoot.querySelectorAll<HTMLElement>(".sprite-card-anim");
+    for (const card of cards) {
+      const id = card.dataset.animId;
+      const anim = SPRITE_ANIMATIONS.find((a) => a.id === id);
+      if (!anim || anim.keys.length === 0) continue;
+      const canvas = card.querySelector("canvas") as HTMLCanvasElement;
+      const frame = Math.floor((t / 1000) * anim.fps) % anim.keys.length;
+      drawSpriteOnCanvas(canvas, anim.keys[frame]!);
+    }
+    animRaf = requestAnimationFrame(tickAnims);
+  }
+
+  function startAnims() {
+    if (animRunning) return;
+    animRunning = true;
+    animRaf = requestAnimationFrame(tickAnims);
+  }
+  function stopAnims() {
+    animRunning = false;
+    cancelAnimationFrame(animRaf);
+  }
+
+  function setTab(tab: TabId) {
+    activeTab = tab;
+    tabFeel.classList.toggle("active", tab === "feel");
+    tabSprites.classList.toggle("active", tab === "sprites");
+    feelRoot.classList.toggle("hidden", tab !== "feel");
+    spritesRoot.classList.toggle("hidden", tab !== "sprites");
+    titleEl.textContent = tab === "feel" ? "Game feel" : "Sprites";
+    resetBtn.style.display = tab === "feel" ? "" : "none";
+    if (tab === "sprites") {
+      buildSpriteBrowser();
+      startAnims();
+    } else {
+      stopAnims();
+    }
+  }
+
+  tabFeel.addEventListener("click", () => setTab("feel"));
+  tabSprites.addEventListener("click", () => setTab("sprites"));
 
   function open() {
     panel.classList.remove("hidden");
     backdrop.classList.remove("hidden");
     syncInputs();
+    setTab(activeTab);
   }
   function close() {
     panel.classList.add("hidden");
     backdrop.classList.add("hidden");
+    stopAnims();
     saveSettings();
   }
+
   function syncInputs() {
     for (const f of FIELDS) {
       const input = document.getElementById(`set-${f.key}`) as HTMLInputElement | null;
@@ -227,13 +372,53 @@ export function initSettingsPanel(onChange?: () => void) {
     onChange?.();
   });
 
-  // Esc closes settings when open
   window.addEventListener("keydown", (e) => {
     if (e.key === "Escape" && !panel.classList.contains("hidden")) {
       e.stopPropagation();
       close();
     }
   });
+}
+
+function buildFieldRow(f: Field, onChange?: () => void): HTMLElement {
+  const row = document.createElement("div");
+  row.className = "settings-row";
+  if (f.kind === "bool") {
+    row.innerHTML = `
+      <div class="settings-row-head">
+        <label for="set-${f.key}">${f.label}</label>
+        <input type="checkbox" id="set-${f.key}" ${settings[f.key] ? "checked" : ""} />
+      </div>
+      <p class="settings-hint">${f.hint}</p>`;
+    const input = row.querySelector("input") as HTMLInputElement;
+    input.addEventListener("change", () => {
+      settings.showDirDebug = input.checked;
+      saveSettings();
+      onChange?.();
+    });
+  } else {
+    const val = Number(settings[f.key]);
+    row.innerHTML = `
+      <div class="settings-row-head">
+        <label for="set-${f.key}">${f.label}</label>
+        <span class="settings-val" id="set-val-${f.key}">${formatVal(val, f.step)}</span>
+      </div>
+      <input type="range" id="set-${f.key}" min="${f.min}" max="${f.max}" step="${f.step}" value="${val}" />
+      <p class="settings-hint">${f.hint}</p>`;
+    const input = row.querySelector("input") as HTMLInputElement;
+    const span = row.querySelector(`#set-val-${f.key}`) as HTMLElement;
+    input.addEventListener("input", () => {
+      const v = Number(input.value);
+      span.textContent = formatVal(v, f.step);
+      setNumeric(f.key, v);
+      applySettings();
+      onChange?.();
+    });
+    input.addEventListener("change", () => {
+      saveSettings();
+    });
+  }
+  return row;
 }
 
 function formatVal(v: number, step: number) {
@@ -290,5 +475,3 @@ function setNumeric(key: keyof TunableSettings, v: number) {
       break;
   }
 }
-
-export { DEFAULT_SETTINGS };

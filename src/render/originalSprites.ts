@@ -128,6 +128,110 @@ export function getOriginalSprite(key: string): HTMLCanvasElement | HTMLImageEle
   return cache.get(key) ?? null;
 }
 
+export type SpriteCatalogEntry = {
+  key: string;
+  file: string;
+  flipped: boolean;
+  loaded: boolean;
+  width: number;
+  height: number;
+};
+
+/** Every registered sprite key for the debug browser. */
+export function listSpriteCatalog(): SpriteCatalogEntry[] {
+  return Object.entries(RAW).map(([key, spec]) => {
+    const img = cache.get(key);
+    return {
+      key,
+      file: spec.file,
+      flipped: !!spec.flip,
+      loaded: !!img,
+      width: img ? img.width : 0,
+      height: img ? img.height : 0,
+    };
+  });
+}
+
+/** Named multi-frame animations for the debug browser. */
+export const SPRITE_ANIMATIONS: { id: string; label: string; keys: string[]; fps: number }[] = [
+  {
+    id: "skier-dirs",
+    label: "Skier directions",
+    keys: [
+      "skier_hardLeft",
+      "skier_left",
+      "skier_downLeft",
+      "skier_down",
+      "skier_downRight",
+      "skier_right",
+      "skier_hardRight",
+    ],
+    fps: 4,
+  },
+  {
+    id: "skier-flip",
+    label: "Skier backflip",
+    keys: ["skier_jump", "skier_flip1", "skier_flip2"],
+    fps: 6,
+  },
+  {
+    id: "skier-crash",
+    label: "Skier crash",
+    keys: ["skier_ouch", "skier_crash"],
+    fps: 2,
+  },
+  {
+    id: "board-dirs",
+    label: "Snowboarder directions",
+    keys: [
+      "board_hardLeft",
+      "board_left",
+      "board_downLeft",
+      "board_down",
+      "board_downRight",
+      "board_right",
+      "board_hardRight",
+    ],
+    fps: 4,
+  },
+  {
+    id: "board-air",
+    label: "Snowboarder air / crash",
+    keys: ["board_jump", "board_flip1", "board_flip2", "board_ouch"],
+    fps: 5,
+  },
+  {
+    id: "yeti-run",
+    label: "Yeti run",
+    keys: ["yeti", "yeti2", "yeti3", "yeti4"],
+    fps: 6,
+  },
+  {
+    id: "yeti-eat",
+    label: "Yeti eat",
+    keys: ["yetiEat", "yetiEat2"],
+    fps: 4,
+  },
+  {
+    id: "dog",
+    label: "Dog walk",
+    keys: ["dog", "dog2"],
+    fps: 5,
+  },
+  {
+    id: "beginner",
+    label: "Beginner snowplow",
+    keys: ["beginner", "beginner2"],
+    fps: 3,
+  },
+  {
+    id: "fire",
+    label: "Fire (dead tree)",
+    keys: ["fire0", "fire1", "fire2"],
+    fps: 8,
+  },
+];
+
 export function playerSpriteName(
   character: CharacterType,
   dir: Direction,
