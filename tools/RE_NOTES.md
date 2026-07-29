@@ -25,6 +25,20 @@ Resource align shift: **4** (offsets/lengths are in 16-byte paragraphs).
 | IDs | Content |
 |-----|---------|
 | 3–11 | Player skier directions + jump |
+
+**Skier direction art (corrected visual mapping):**
+
+| Resource | Facing | Notes |
+|----------|--------|-------|
+| #3 | **east** (hard right) | Skis point right — original extract filename said “west” |
+| #4 | **west** (hard left) | Skis point left |
+| #5 | wsWest | |
+| #6 | esEast | |
+| #7 | sWest | |
+| #8 | sEast | |
+| #9 | **south** | Back view, parallel skis — true straight-down pose |
+| #10 | south alt | Near-south lean |
+| #11 | jump | |
 | 12–18 | Crash / ouch / tumble |
 | 23–26 | Slalom flags / markers |
 | 28–30 | **Snowboarders** (NPC + playable art) |

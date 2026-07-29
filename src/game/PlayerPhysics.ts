@@ -34,20 +34,25 @@ function clampDir(i: number): Direction {
 }
 
 /**
- * Map horizontal mouse offset (px from skier) to direction index.
- * Thresholds 1 / 3 / 6 / 12 from SKI.EXE code+0x49AB style ladder.
+ * Map horizontal mouse offset (screen px from skier) → direction index.
+ *
+ * Original EXE used thresholds 1 / 3 / 6 / 12 in game pixels. On a modern
+ * full-screen canvas those raw values are useless (1px ≠ south), so we scale
+ * them relative to a ~640-wide playfield and keep a real center dead-zone for
+ * the true south pose.
  */
 function dirFromMouseDx(dx: number): number {
   const a = Math.abs(dx);
-  let step = 0; // 0 = south, 1 = sEast/sWest, 2 = es/ws, 3 = east/west
-  if (a >= MOUSE_DIR_THRESHOLDS[0]) step = 3;
-  else if (a >= MOUSE_DIR_THRESHOLDS[1]) step = 2;
-  else if (a >= MOUSE_DIR_THRESHOLDS[2]) step = 1;
-  else if (a >= MOUSE_DIR_THRESHOLDS[3]) step = 1;
+  const [hard, sharp, mild, dead] = MOUSE_DIR_THRESHOLDS;
+  let step = 0; // 0 = south, 1 = sE/sW, 2 = es/ws, 3 = east/west
+  if (a >= hard) step = 3;
+  else if (a >= sharp) step = 2;
+  else if (a >= mild) step = 1;
+  else if (a >= dead) step = 1;
   else step = 0;
 
-  if (dx < 0) return 3 - step; // west side
-  if (dx > 0) return 3 + step; // east side
+  if (dx < 0) return 3 - step;
+  if (dx > 0) return 3 + step;
   return 3;
 }
 
@@ -98,7 +103,6 @@ export function updatePlayer(player: Player, input: SteerInput, dt: number) {
     player.airborne -= dt;
     if (input.left) player.vx -= 80 * dt;
     if (input.right) player.vx += 80 * dt;
-    // slight gravity back to slope speed
     player.vy = Math.max(player.vy, 120);
     player.x += player.vx * dt;
     player.y += player.vy * dt;
@@ -111,11 +115,13 @@ export function updatePlayer(player: Player, input: SteerInput, dt: number) {
   let idx = dirIndex(player.dir === "stop" || player.dir === "up" ? "down" : player.dir);
   const board = player.character === "snowboarder";
 
-  // --- Keyboard has priority over mouse (fixes left/right being eaten by mouse) ---
-  const keySteer = input.left || input.right || input.leftPressed || input.rightPressed;
+  // Any keyboard movement key beats the mouse (original is mouse-first, but
+  // keyboard must be usable on a wide modern canvas).
+  const keyTurn = input.left || input.right || input.leftPressed || input.rightPressed;
+  const keyVertical = input.up || input.down;
+  const keyAny = keyTurn || keyVertical;
 
-  if (keySteer) {
-    // Immediate step on press
+  if (keyTurn) {
     if (input.leftPressed) {
       idx = Math.max(0, idx - 1);
       turnCooldown = TURN_STEP_MS / 1000;
@@ -123,7 +129,6 @@ export function updatePlayer(player: Player, input: SteerInput, dt: number) {
       idx = Math.min(6, idx + 1);
       turnCooldown = TURN_STEP_MS / 1000;
     } else {
-      // Hold to keep turning at original-ish cadence
       turnCooldown -= dt;
       if (turnCooldown <= 0) {
         if (input.left) idx = Math.max(0, idx - 1);
@@ -131,14 +136,25 @@ export function updatePlayer(player: Player, input: SteerInput, dt: number) {
         turnCooldown = TURN_STEP_MS / 1000;
       }
     }
-  } else if (input.mouseDx !== null) {
+  } else if (!keyAny && input.mouseDx !== null) {
     idx = dirFromMouseDx(input.mouseDx);
   }
 
-  // Up = edge toward hard left/right (brake); Down = tuck toward south
+  // ↓ alone (or with no left/right) = tuck straight south immediately.
+  // Previously mouse re-applied every frame and only allowed one step toward
+  // south, so a cursor slightly off-center left you stuck facing hard right
+  // while still sliding downhill.
+  if (input.down && !input.left && !input.right) {
+    idx = 3;
+  } else if (input.down && (input.left || input.right)) {
+    // down + side = pull one step toward south
+    if (idx < 3) idx++;
+    else if (idx > 3) idx--;
+  }
+
+  // ↑ = brake / edge out toward hard left/right (or stop when already south)
   if (input.up && !input.down) {
     if (idx === 3) {
-      // Stop / sideslip — snowboarders keep a slow slide
       player.dir = board ? "down" : "stop";
       if (!board) {
         const target = velocityFor("stop", player.character);
@@ -148,36 +164,40 @@ export function updatePlayer(player: Player, input: SteerInput, dt: number) {
         player.y += player.vy * dt;
         return;
       }
-      // board: fall through with down at reduced speed below
     } else if (idx < 3) {
       idx = Math.max(0, idx - 1);
     } else {
       idx = Math.min(6, idx + 1);
     }
-  } else if (input.down) {
-    if (idx < 3) idx++;
-    else if (idx > 3) idx--;
   }
 
-  if (player.dir === "stop" && (input.down || input.left || input.right || input.mouseDx !== null)) {
-    idx = 3;
+  // Leave stop when player commits to a direction
+  if (player.dir === "stop") {
+    if (input.down && !input.left && !input.right) idx = 3;
+    else if (keyTurn) {
+      /* idx already stepped above */
+    } else if (!keyAny && input.mouseDx !== null) idx = dirFromMouseDx(input.mouseDx);
   }
 
   player.dir = clampDir(idx);
 
-  // Snowboarder: never fully stop
   if (board && player.dir === "stop") {
     player.dir = "down";
   }
 
   const target = velocityFor(player.dir, player.character);
-  // Up while already "down" for boarder = scrub speed
-  const scrub = board && input.up && !input.down && idx === 3;
+  const scrub = board && input.up && !input.down && dirIndex(player.dir) === 3;
   const aim = scrub ? { x: target.x * 0.3, y: target.y * 0.35 } : target;
 
-  const lerp = board ? 12 : 10;
+  // Snappier direction changes so facing matches movement quickly
+  const lerp = board ? 14 : 12;
   player.vx += (aim.x - player.vx) * Math.min(1, lerp * dt);
   player.vy += (aim.y - player.vy) * Math.min(1, lerp * dt);
+
+  // Zero out tiny sideways drift when fully tucked so “straight down” is straight
+  if (player.dir === "down" && Math.abs(player.vx) < 8) {
+    player.vx = 0;
+  }
 
   player.x += player.vx * dt;
   player.y += player.vy * dt;

@@ -4,15 +4,24 @@
  */
 import type { CharacterType, Direction, ObstacleType } from "../game/types";
 
+/**
+ * Skier bitmaps re-identified from visual audit of SKI.EXE resources:
+ *   #3 = east (skis point right)   #4 = west (skis point left)
+ *   #5 = wsWest   #6 = esEast
+ *   #7 = sWest    #8 = sEast
+ *   #9 = south (back view, skis vertical — the true “straight down” pose)
+ *   #10 = south alt (near-south lean)   #11 = jump
+ * Earlier labels had west/east swapped and used the wrong frame for south.
+ */
 const FILES: Record<string, string> = {
-  skier_hardLeft: "003_skier_west.png",
+  skier_hardLeft: "004_skier_east.png", // file name is legacy; art faces west
   skier_left: "005_skier_wsWest.png",
   skier_downLeft: "007_skier_sWest.png",
   skier_down: "009_skier_south.png",
   skier_downRight: "008_skier_sEast.png",
   skier_right: "006_skier_esEast.png",
-  skier_hardRight: "004_skier_east.png",
-  skier_stop: "003_skier_west.png",
+  skier_hardRight: "003_skier_west.png", // file name is legacy; art faces east
+  skier_stop: "004_skier_east.png", // stopped = hard edge (west), classic feel
   skier_jump: "011_skier_jump.png",
   skier_ouch: "012_skier_ouch.png",
   skier_crash: "013_skier_sit_l.png",

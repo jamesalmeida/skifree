@@ -10,10 +10,12 @@ export const PIXELS_PER_METRE = 16;
 export const YETI_DISTANCE_M = 2000;
 
 /**
- * Mouse delta thresholds (screen pixels relative to skier) → direction steps.
- * Recovered from cmp chain near code+0x49AB (1, 3, 6, 12).
+ * Mouse delta thresholds (CSS px from skier / screen center) → direction steps.
+ * Original EXE used 1 / 3 / 6 / 12 in 640-wide game pixels; scaled ~8× for
+ * modern full-screen canvas so the center dead-zone actually yields south.
+ * Order: [hard edge, sharp diagonal, mild diagonal, dead-zone].
  */
-export const MOUSE_DIR_THRESHOLDS = [12, 6, 3, 1] as const;
+export const MOUSE_DIR_THRESHOLDS = [96, 48, 28, 16] as const;
 
 /**
  * Direction order matching original sprite set (west → east).
