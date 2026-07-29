@@ -128,14 +128,15 @@ export class World {
       }
     }
 
+    // Sparse NPCs — chunks are ~220m; keep the slope readable
     // Fast background skiers / snowboarders
-    if (this.rng.next() < 0.35) {
-      const kind = this.rng.next() < 0.4 ? "snowboarder" : "skier";
+    if (this.rng.next() < 0.07) {
+      const kind = this.rng.next() < 0.35 ? "snowboarder" : "skier";
       const side = this.rng.next() < 0.5 ? -1 : 1;
       this.npcs.push({
         id: id(),
         kind,
-        x: side * this.rng.range(90, 320),
+        x: side * this.rng.range(120, 420),
         y: this.rng.range(y0, y1),
         vx: this.rng.range(-30, 30),
         vy: this.rng.range(80, 150),
@@ -145,22 +146,22 @@ export class World {
     }
 
     // Beginner snowplow skiers — pink, skis wedged, slowly downhill
-    if (this.rng.next() < 0.4) {
+    if (this.rng.next() < 0.05) {
       const side = this.rng.next() < 0.5 ? -1 : 1;
       this.npcs.push({
         id: id(),
         kind: "beginner",
-        x: side * this.rng.range(20, 280),
+        x: side * this.rng.range(40, 300),
         y: this.rng.range(y0, y1),
         vx: this.rng.range(-8, 8),
-        vy: this.rng.range(28, 48), // slow
+        vy: this.rng.range(28, 48),
         dir: "down",
         color: 0,
       });
     }
 
-    // Dogs walking across left/right
-    if (this.rng.next() < 0.4) {
+    // Dogs walking across left/right (rare)
+    if (this.rng.next() < 0.045) {
       const goingRight = this.rng.next() < 0.5;
       this.npcs.push({
         id: id(),
