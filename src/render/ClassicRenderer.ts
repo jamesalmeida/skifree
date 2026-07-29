@@ -117,6 +117,8 @@ export class ClassicRenderer {
         crashed: p.crashTimer > 0.5,
         ouch: p.crashTimer > 0 && p.crashTimer <= 0.5,
         airborne: p.airborne > 0,
+        vx: p.vx,
+        vy: p.vy,
       });
       const bounce = p.airborne > 0 ? -14 * Math.sin(Math.min(1, p.airborne / 0.7) * Math.PI) : 0;
       list.push({

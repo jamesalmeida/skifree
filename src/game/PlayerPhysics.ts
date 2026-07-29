@@ -185,19 +185,13 @@ export function updatePlayer(player: Player, input: SteerInput, dt: number) {
     player.dir = "down";
   }
 
+  // Original SkiFree uses discrete per-direction speeds (not smooth lerp).
+  // Snap velocity to the table so facing and movement never disagree.
   const target = velocityFor(player.dir, player.character);
   const scrub = board && input.up && !input.down && dirIndex(player.dir) === 3;
   const aim = scrub ? { x: target.x * 0.3, y: target.y * 0.35 } : target;
-
-  // Snappier direction changes so facing matches movement quickly
-  const lerp = board ? 14 : 12;
-  player.vx += (aim.x - player.vx) * Math.min(1, lerp * dt);
-  player.vy += (aim.y - player.vy) * Math.min(1, lerp * dt);
-
-  // Zero out tiny sideways drift when fully tucked so “straight down” is straight
-  if (player.dir === "down" && Math.abs(player.vx) < 8) {
-    player.vx = 0;
-  }
+  player.vx = aim.x;
+  player.vy = aim.y;
 
   player.x += player.vx * dt;
   player.y += player.vy * dt;

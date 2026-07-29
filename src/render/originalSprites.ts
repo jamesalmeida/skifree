@@ -5,23 +5,29 @@
 import type { CharacterType, Direction, ObstacleType } from "../game/types";
 
 /**
- * Skier bitmaps re-identified from visual audit of SKI.EXE resources:
- *   #3 = east (skis point right)   #4 = west (skis point left)
- *   #5 = wsWest   #6 = esEast
- *   #7 = sWest    #8 = sEast
- *   #9 = south (back view, skis vertical — the true “straight down” pose)
- *   #10 = south alt (near-south lean)   #11 = jump
- * Earlier labels had west/east swapped and used the wrong frame for south.
+ * Visual re-audit of skier frames (resource id → on-screen facing):
+ *
+ *  #3  profile facing LEFT  → west / hardLeft
+ *  #4  profile facing RIGHT → east / hardRight
+ *  #5  intermediate left     → wsWest
+ *  #6  intermediate right    → esEast
+ *  #7  downhill-left         → sWest
+ *  #8  frontal, skis vertical → SOUTH (true straight-down)
+ *  #9  facing RIGHT diagonal → sEast  (was wrongly used as south!)
+ *  #10 downhill-left alt     → sWest alt
+ *  #11 jump
+ *
+ * Filenames still have the first pass labels; trust ids + art, not names.
  */
 const FILES: Record<string, string> = {
-  skier_hardLeft: "004_skier_east.png", // file name is legacy; art faces west
+  skier_hardLeft: "003_skier_west.png", // faces left
   skier_left: "005_skier_wsWest.png",
   skier_downLeft: "007_skier_sWest.png",
-  skier_down: "009_skier_south.png",
-  skier_downRight: "008_skier_sEast.png",
+  skier_down: "008_skier_sEast.png", // frontal south (filename is wrong)
+  skier_downRight: "009_skier_south.png", // faces right (filename is wrong)
   skier_right: "006_skier_esEast.png",
-  skier_hardRight: "003_skier_west.png", // file name is legacy; art faces east
-  skier_stop: "004_skier_east.png", // stopped = hard edge (west), classic feel
+  skier_hardRight: "004_skier_east.png", // faces right
+  skier_stop: "003_skier_west.png",
   skier_jump: "011_skier_jump.png",
   skier_ouch: "012_skier_ouch.png",
   skier_crash: "013_skier_sit_l.png",
@@ -92,19 +98,57 @@ export function getOriginalSprite(key: string): HTMLImageElement | null {
   return cache.get(key) ?? null;
 }
 
+/**
+ * Pick facing from actual velocity so the sprite always matches movement.
+ * atan2(vx, vy): 0 = straight down the slope, −π/2 = left, +π/2 = right.
+ */
+export function directionFromVelocity(vx: number, vy: number, fallback: Direction): Direction {
+  const speed = Math.hypot(vx, vy);
+  if (speed < 12) {
+    if (fallback === "stop" || fallback === "up") return fallback;
+    // nearly stopped but still “in” a hard-edge pose
+    if (fallback === "hardLeft" || fallback === "hardRight") return fallback;
+    return "stop";
+  }
+
+  // Angle from straight-down axis
+  const deg = (Math.atan2(vx, vy) * 180) / Math.PI;
+  // deg: 0 down, negative left, positive right, ±180 uphill
+  if (deg < -75) return "hardLeft";
+  if (deg < -45) return "left";
+  if (deg < -15) return "downLeft";
+  if (deg <= 15) return "down";
+  if (deg <= 45) return "downRight";
+  if (deg <= 75) return "right";
+  return "hardRight";
+}
+
 export function playerSpriteName(
   character: CharacterType,
   dir: Direction,
-  opts: { crashed?: boolean; airborne?: boolean; ouch?: boolean } = {},
+  opts: {
+    crashed?: boolean;
+    airborne?: boolean;
+    ouch?: boolean;
+    vx?: number;
+    vy?: number;
+  } = {},
 ): string {
   const prefix = character === "snowboarder" ? "board_" : "skier_";
   if (opts.crashed) return prefix + "crash";
   if (opts.ouch) return prefix + "ouch";
   if (opts.airborne) return prefix + "jump";
-  if (dir === "up" || dir === "stop") {
+
+  // Prefer velocity so art always matches how they're actually sliding
+  let face = dir;
+  if (opts.vx !== undefined && opts.vy !== undefined && !opts.crashed && !opts.airborne) {
+    face = directionFromVelocity(opts.vx, opts.vy, dir);
+  }
+
+  if (face === "up" || face === "stop") {
     return character === "snowboarder" ? "board_stop" : "skier_stop";
   }
-  return prefix + dir;
+  return prefix + face;
 }
 
 export function obstacleSpriteName(type: ObstacleType): string {
