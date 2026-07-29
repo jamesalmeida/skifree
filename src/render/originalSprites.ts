@@ -1,41 +1,30 @@
 /**
- * Original SKI.EXE bitmaps with a facing map built from visual audit + playtest.
+ * Player skier frames from the classic labeled sprite sheet
+ * (same original SkiFree art; crops from spriters-resource / skifree.js).
  *
- * Clear profiles from the extract:
- *   #4  = hard west (profile facing left)
- *   #6  = esEast (intermediate right) — confirmed correct in playtest
- *   #8  = sWest (downhill-left)
- *   #9  = sEast (downhill-right)
- *   #5  = narrow frame, best “down the slope” / south candidate (16×32)
- *   #11 = jump
+ * EXE resource bitmaps were hard to map (wrong IDs kept getting assigned to
+ * south). Labeled crops are unambiguous:
+ *   west / wsWest / sWest / south / sEast / esEast / east / jumping / ouch / hit
  *
- * Missing mirrors are created by flipping #4 / #6 so left/right are true mirrors.
+ * World objects still use bitmaps extracted from SKI.EXE.
  */
 import type { CharacterType, Direction, ObstacleType } from "../game/types";
 
-/** Source PNG under public/original-sprites/ */
 const RAW: Record<string, { file: string; flip?: boolean }> = {
-  // --- skier ---
-  // hard left: definitive west profile (skis horizontal, face left)
-  skier_hardLeft: { file: "004_skier_east.png" }, // filename is legacy
-  // intermediate left (wsWest)
-  skier_left: { file: "010_skier_south_alt.png" },
-  // downhill-left (sWest)
-  skier_downLeft: { file: "008_skier_sEast.png" }, // filename is legacy; art faces left
-  // south — only narrow frame; closest to “down the mountain”
-  skier_down: { file: "005_skier_wsWest.png" },
-  // downhill-right (sEast)
-  skier_downRight: { file: "009_skier_south.png" }, // filename is legacy; art faces right
-  // intermediate right (esEast) — confirmed correct in playtest
-  skier_right: { file: "006_skier_esEast.png" },
-  // hard right = mirror of hard-left west profile
-  skier_hardRight: { file: "004_skier_east.png", flip: true },
-  skier_stop: { file: "004_skier_east.png" },
-  skier_jump: { file: "011_skier_jump.png" },
-  skier_ouch: { file: "012_skier_ouch.png" },
-  skier_crash: { file: "013_skier_sit_l.png" },
+  // --- skier (labeled original art) ---
+  skier_hardLeft: { file: "labeled_west.png" },
+  skier_left: { file: "labeled_wsWest.png" },
+  skier_downLeft: { file: "labeled_sWest.png" },
+  skier_down: { file: "labeled_south.png" },
+  skier_downRight: { file: "labeled_sEast.png" },
+  skier_right: { file: "labeled_esEast.png" },
+  skier_hardRight: { file: "labeled_east.png" },
+  skier_stop: { file: "labeled_west.png" },
+  skier_jump: { file: "labeled_jumping.png" },
+  skier_ouch: { file: "labeled_ouch.png" },
+  skier_crash: { file: "labeled_hit.png" },
 
-  // --- snowboarder (limited frames; flip for left side) ---
+  // --- snowboarder (from EXE extract; flip left side) ---
   board_hardLeft: { file: "029_snowboarder_sw.png" },
   board_left: { file: "029_snowboarder_sw.png" },
   board_downLeft: { file: "029_snowboarder_sw.png" },
@@ -45,10 +34,10 @@ const RAW: Record<string, { file: string; flip?: boolean }> = {
   board_hardRight: { file: "028_snowboarder_se.png" },
   board_stop: { file: "030_snowboarder_s.png" },
   board_jump: { file: "030_snowboarder_s.png" },
-  board_ouch: { file: "012_skier_ouch.png" },
-  board_crash: { file: "013_skier_sit_l.png" },
+  board_ouch: { file: "labeled_ouch.png" },
+  board_crash: { file: "labeled_hit.png" },
 
-  // --- world ---
+  // --- world (EXE extract) ---
   tree: { file: "051_tree_tall.png" },
   smallTree: { file: "049_tree_med.png" },
   deadTree: { file: "050_tree_dead.png" },
@@ -98,7 +87,6 @@ export async function preloadOriginalSprites(): Promise<void> {
   if (loadPromise) return loadPromise;
   loadPromise = (async () => {
     const base = `${import.meta.env.BASE_URL}original-sprites/`;
-    // Load unique files once
     const fileCache = new Map<string, HTMLImageElement>();
     const files = [...new Set(Object.values(RAW).map((r) => r.file))];
     await Promise.all(
