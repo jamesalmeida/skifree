@@ -85,14 +85,14 @@ function applyControlsUi(scheme: ControlScheme) {
   });
   if (scheme === "mouse") {
     controlsHint.textContent =
-      "Move the pointer left/right of the skier to carve (classic SkiFree).";
+      "Pointer steers; click or Space to jump; ↑ in air for backflips.";
     controlsHelp.innerHTML = `
-      <p>Mouse left/right of skier · steer (classic)</p>
+      <p>Mouse · steer · click / <kbd>Space</kbd> jump · <kbd>↑</kbd> air flip</p>
       <p><kbd>F2</kbd> restart · <kbd>F3</kbd> / <kbd>P</kbd> pause · <kbd>G</kbd> graphics · <kbd>C</kbd> character</p>`;
   } else {
-    controlsHint.textContent = "Arrow keys / WASD / numpad to steer.";
+    controlsHint.textContent = "Arrow keys / WASD / numpad · Space to jump.";
     controlsHelp.innerHTML = `
-      <p><kbd>←</kbd><kbd>→</kbd> steer · <kbd>↑</kbd> brake · <kbd>↓</kbd> tuck</p>
+      <p><kbd>←</kbd><kbd>→</kbd> steer · <kbd>↑</kbd> brake / flip · <kbd>↓</kbd> tuck · <kbd>Space</kbd> jump</p>
       <p><kbd>F2</kbd> restart · <kbd>F3</kbd> / <kbd>P</kbd> pause · <kbd>G</kbd> graphics · <kbd>C</kbd> character</p>`;
   }
 }

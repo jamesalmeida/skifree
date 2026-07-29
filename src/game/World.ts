@@ -3,7 +3,6 @@ import type { GameMode, Obstacle, ObstacleType, NPC } from "./types";
 let nextId = 1;
 const id = () => nextId++;
 
-/** Hitboxes tuned to original sprite footprints (logical pixels). */
 function sizeFor(type: ObstacleType): { hw: number; hh: number; solid: boolean } {
   switch (type) {
     case "tree":
@@ -30,7 +29,7 @@ function sizeFor(type: ObstacleType): { hw: number; hh: number; solid: boolean }
 
 function make(type: ObstacleType, x: number, y: number): Obstacle {
   const s = sizeFor(type);
-  return { id: id(), type, x, y, ...s, passed: false };
+  return { id: id(), type, x, y, ...s, passed: false, onFire: false, fireFrame: 0, fireT: 0 };
 }
 
 export class Rng {
@@ -73,7 +72,6 @@ export class World {
   }
 
   private seedStartArea() {
-    // Start corridor like original (signs + open snow)
     for (let y = 120; y < 500; y += 90) {
       this.obstacles.push(make("tree", -280 + this.rng.range(-30, 30), y));
       this.obstacles.push(make("tree", 280 + this.rng.range(-30, 30), y));
@@ -130,8 +128,8 @@ export class World {
       }
     }
 
-    // Background skiers / snowboarders (original NPCs)
-    if (this.rng.next() < 0.45) {
+    // Background skiers / snowboarders
+    if (this.rng.next() < 0.4) {
       const kind = this.rng.next() < 0.4 ? "snowboarder" : "skier";
       const side = this.rng.next() < 0.5 ? -1 : 1;
       this.npcs.push({
@@ -145,10 +143,32 @@ export class World {
         color: this.rng.int(0, 5),
       });
     }
+
+    // Dogs walking across the slope
+    if (this.rng.next() < 0.35) {
+      const side = this.rng.next() < 0.5 ? -1 : 1;
+      this.npcs.push({
+        id: id(),
+        kind: "dog",
+        x: side * this.rng.range(40, 400),
+        y: this.rng.range(y0, y1),
+        vx: -side * this.rng.range(35, 70), // walk across
+        vy: this.rng.range(15, 40), // slight downhill drift
+        dir: side < 0 ? "right" : "left",
+        color: 0,
+        dogState: "walk",
+        dogTimer: 0,
+        dogFrame: 0,
+      });
+    }
   }
 
   updateNpcs(dt: number, playerY: number) {
     for (const n of this.npcs) {
+      if (n.kind === "dog") {
+        this.updateDog(n, dt, playerY);
+        continue;
+      }
       n.x += n.vx * dt;
       n.y += n.vy * dt;
       n.vx += (this.rng.next() - 0.5) * 40 * dt;
@@ -159,5 +179,51 @@ export class World {
       else n.dir = "down";
       if (n.y < playerY - 400) n.y = playerY + this.rng.range(250, 700);
     }
+  }
+
+  private updateDog(n: NPC, dt: number, playerY: number) {
+    n.dogTimer = (n.dogTimer ?? 0) - dt;
+    n.dogFrame = ((n.dogFrame ?? 0) + dt * 8) % 2;
+
+    if (n.dogState === "woof" || n.dogState === "pee") {
+      // Stay put while reacting
+      if ((n.dogTimer ?? 0) <= 0) {
+        n.dogState = "walk";
+      }
+      return;
+    }
+
+    n.x += n.vx * dt;
+    n.y += n.vy * dt;
+    if (Math.abs(n.x) > WORLD_HALF - 20) {
+      n.vx *= -1;
+      n.dir = n.vx > 0 ? "right" : "left";
+    }
+    if (n.y < playerY - 400) {
+      n.y = playerY + this.rng.range(200, 600);
+      n.x = this.rng.range(-WORLD_HALF + 80, WORLD_HALF - 80);
+    }
+  }
+
+  /** Animate burning dead trees */
+  updateFires(dt: number) {
+    for (const o of this.obstacles) {
+      if (!o.onFire) continue;
+      o.fireT = (o.fireT ?? 0) + dt;
+      o.fireFrame = Math.floor((o.fireT ?? 0) * 10) % 3;
+      // Burn out after a while but stay as dead tree charcoal
+      if ((o.fireT ?? 0) > 4) {
+        o.onFire = false;
+      }
+    }
+  }
+
+  igniteDeadTree(o: Obstacle) {
+    if (o.type !== "deadTree" || o.onFire) return;
+    o.onFire = true;
+    o.fireT = 0;
+    o.fireFrame = 0;
+    // While on fire, still solid (burning tree)
+    o.solid = true;
   }
 }

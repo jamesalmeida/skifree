@@ -62,7 +62,6 @@ export class ClassicRenderer {
 
     const camX = snap.player.x;
     const camY = snap.cameraY;
-    // Skier slightly above vertical center — original places you mid-window
     const originX = w / 2;
     const originY = h * 0.4;
 
@@ -80,13 +79,52 @@ export class ClassicRenderer {
       const key = obstacleSpriteName(o.type);
       list.push({
         y: o.y,
-        draw: () => this.drawSprite(key, sx, sy),
+        draw: () => {
+          this.drawSprite(key, sx, sy);
+          if (o.onFire) {
+            const fi = o.fireFrame ?? 0;
+            this.drawSprite(`fire${fi % 3}`, sx, sy - 8);
+          }
+        },
       });
     }
 
     for (const n of snap.npcs) {
       const { sx, sy } = toScreen(n.x, n.y);
       if (sy < -80 || sy > h + 80) continue;
+
+      if (n.kind === "dog") {
+        const dogKey = (n.dogFrame ?? 0) < 1 ? "dog" : "dog2";
+        const flip = n.vx > 0;
+        list.push({
+          y: n.y,
+          draw: () => {
+            this.drawSprite(dogKey, sx, sy, { flipX: flip });
+            // pee puddle
+            if (n.dogState === "pee") {
+              ctx.fillStyle = "rgba(250, 220, 80, 0.55)";
+              ctx.beginPath();
+              ctx.ellipse(sx + (flip ? 10 : -10), sy + 2, 8, 3, 0, 0, Math.PI * 2);
+              ctx.fill();
+            }
+            // woof bubble
+            if (n.dogState === "woof") {
+              ctx.fillStyle = "#fff";
+              ctx.strokeStyle = "#333";
+              ctx.lineWidth = 1;
+              const bx = sx + 12;
+              const by = sy - 28;
+              ctx.fillRect(bx, by, 36, 14);
+              ctx.strokeRect(bx, by, 36, 14);
+              ctx.fillStyle = "#111";
+              ctx.font = "bold 10px sans-serif";
+              ctx.fillText("Woof!", bx + 4, by + 11);
+            }
+          },
+        });
+        continue;
+      }
+
       const key =
         n.kind === "snowboarder"
           ? n.dir === "downLeft" || n.dir === "left" || n.dir === "hardLeft"
@@ -114,15 +152,15 @@ export class ClassicRenderer {
       const p = snap.player;
       const { sx, sy } = toScreen(p.x, p.y);
       const key = playerSpriteName(p.character, p.dir, {
-        crashed: p.crashTimer > 0.5,
-        ouch: p.crashTimer > 0 && p.crashTimer <= 0.5,
+        crashPhase: p.crashPhase,
         airborne: p.airborne > 0,
+        flipPose: p.flipPose,
       });
-      const bounce = p.airborne > 0 ? -14 * Math.sin(Math.min(1, p.airborne / 0.7) * Math.PI) : 0;
+      const bounce =
+        p.airborne > 0 ? -16 * Math.sin(Math.min(1, p.airborne / 0.75) * Math.PI) : 0;
       list.push({
         y: p.y + 0.5,
         draw: () => {
-          // light shadow
           ctx.fillStyle = "rgba(0,0,0,0.08)";
           ctx.beginPath();
           ctx.ellipse(sx, sy + 2, 12, 4, 0, 0, Math.PI * 2);
@@ -135,7 +173,6 @@ export class ClassicRenderer {
     list.sort((a, b) => a.y - b.y);
     for (const item of list) item.draw();
 
-    // Original-style cursor
     if (snap.mouseX !== null && snap.mouseY !== null) {
       const cur = getOriginalSprite("cursor");
       if (cur) {

@@ -21,20 +21,23 @@ const RAW: Record<string, { file: string; flip?: boolean }> = {
   skier_hardRight: { file: "labeled_east.png" },
   skier_stop: { file: "labeled_west.png" },
   skier_jump: { file: "labeled_jumping.png" },
-  skier_ouch: { file: "labeled_ouch.png" },
-  skier_crash: { file: "labeled_hit.png" },
+  skier_flip1: { file: "labeled_somersault1.png" },
+  skier_flip2: { file: "labeled_somersault2.png" },
+  skier_ouch: { file: "labeled_ouch.png" }, // buried under snow, ski up
+  skier_crash: { file: "labeled_hit.png" }, // sit up in snow
 
-  // --- snowboarder (classic magenta rider + yellow board, NOT the red skier) ---
-  // Frames cropped from the original character sheet boarder strip.
+  // --- snowboarder (classic magenta rider + yellow board) ---
   board_hardLeft: { file: "board_sEast.png", flip: true },
   board_left: { file: "board_sWest.png" },
   board_downLeft: { file: "board_sWest.png" },
-  board_down: { file: "board_south.png" }, // frontal — user reference
+  board_down: { file: "board_south.png" },
   board_downRight: { file: "board_sEast.png" },
   board_right: { file: "board_sEast.png" },
   board_hardRight: { file: "board_sWest.png", flip: true },
   board_stop: { file: "board_south.png" },
-  board_jump: { file: "board_air.png" }, // trick / air
+  board_jump: { file: "board_air.png" },
+  board_flip1: { file: "board_carve.png" },
+  board_flip2: { file: "board_air.png" },
   board_ouch: { file: "board_sit.png" },
   board_crash: { file: "board_sit.png" },
 
@@ -57,6 +60,10 @@ const RAW: Record<string, { file: string; flip?: boolean }> = {
   logo: { file: "053_logo.png" },
   cursor: { file: "086_cursor.png" },
   dog: { file: "031_dog_a.png" },
+  dog2: { file: "032_dog_b.png" },
+  fire0: { file: "083_fire_a.png" },
+  fire1: { file: "084_fire_b.png" },
+  fire2: { file: "085_fire_c.png" },
 };
 
 const cache = new Map<string, HTMLCanvasElement | HTMLImageElement>();
@@ -116,12 +123,20 @@ export function getOriginalSprite(key: string): HTMLCanvasElement | HTMLImageEle
 export function playerSpriteName(
   character: CharacterType,
   dir: Direction,
-  opts: { crashed?: boolean; airborne?: boolean; ouch?: boolean } = {},
+  opts: {
+    crashPhase?: "none" | "ouch" | "sit";
+    airborne?: boolean;
+    flipPose?: 0 | 1 | 2;
+  } = {},
 ): string {
   const prefix = character === "snowboarder" ? "board_" : "skier_";
-  if (opts.crashed) return prefix + "crash";
-  if (opts.ouch) return prefix + "ouch";
-  if (opts.airborne) return prefix + "jump";
+  if (opts.crashPhase === "ouch") return prefix + "ouch";
+  if (opts.crashPhase === "sit") return prefix + "crash";
+  if (opts.airborne) {
+    if (opts.flipPose === 1) return prefix + "flip1";
+    if (opts.flipPose === 2) return prefix + "flip2";
+    return prefix + "jump";
+  }
   if (dir === "up" || dir === "stop") {
     return character === "snowboarder" ? "board_stop" : "skier_stop";
   }

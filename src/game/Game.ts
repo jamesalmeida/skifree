@@ -125,6 +125,8 @@ export class Game {
     this.lastTs = now;
     this.timeMs += dt * 1000;
 
+    const wasAir = this.player.airborne > 0;
+    const flipsBefore = this.player.flipsThisAir;
     const steer = this.readSteer();
     const prevDir = this.player.dir;
     updatePlayer(this.player, steer, dt);
@@ -133,11 +135,22 @@ export class Game {
       this.style += this.player.character === "snowboarder" ? 2 : 1;
     }
     if (this.player.airborne > 0) {
-      this.style += Math.floor(dt * 8);
+      this.style += Math.floor(dt * 6);
+    }
+    // Style for completed flips
+    if (this.player.flipsThisAir > flipsBefore) {
+      this.style += 15 * (this.player.flipsThisAir - flipsBefore);
+      if (this.player.flipsThisAir >= 2) this.toast("Double flip!");
+      else this.toast("Backflip!");
+    }
+    // Landing style
+    if (wasAir && this.player.airborne <= 0 && this.player.crashTimer <= 0 && flipsBefore > 0) {
+      this.style += 10 * flipsBefore;
     }
 
     this.world.ensureGenerated(this.player.y);
     this.world.updateNpcs(dt, this.player.y);
+    this.world.updateFires(dt);
     this.handleCollisions();
     this.updateYeti(dt);
 
@@ -151,9 +164,14 @@ export class Game {
 
   private readSteer(): SteerInput {
     const scheme = this.config.controls;
+    const jumpPressed = this.input.jumpPressed();
+    const upPressed =
+      this.input.wasPressed("arrowup") ||
+      this.input.wasPressed("w") ||
+      this.input.wasPressed("numpad8") ||
+      this.input.wasPressed("8");
 
     if (scheme === "mouse") {
-      // Classic SkiFree: cursor vs skier center sets facing. No key steering.
       let mouseDx: number | null = null;
       if (this.input.mouseInCanvas) {
         const originX = this.canvas.clientWidth / 2;
@@ -162,15 +180,16 @@ export class Game {
       return {
         left: false,
         right: false,
-        up: false,
+        up: this.input.isDown("arrowup") || this.input.isDown("w"),
         down: false,
         mouseDx,
         leftPressed: false,
         rightPressed: false,
+        jumpPressed,
+        upPressed,
       };
     }
 
-    // Keyboard-only: arrows / WASD / numpad
     const left =
       this.input.isDown("arrowleft") ||
       this.input.isDown("a") ||
@@ -221,23 +240,76 @@ export class Game {
       mouseDx: null,
       leftPressed,
       rightPressed,
+      jumpPressed,
+      upPressed,
     };
   }
 
   private handleCollisions() {
     const p = this.player;
-    if (p.crashTimer > 0 || p.invuln > 0 || p.airborne > 0.12) return;
+    if (p.crashTimer > 0 || p.invuln > 0) return;
+
+    const airborne = p.airborne > 0.08;
+
+    // Dogs first
+    for (const n of this.world.npcs) {
+      if (n.kind !== "dog") continue;
+      const dx = Math.abs(p.x - n.x);
+      const dy = Math.abs(p.y - n.y);
+      if (dx > 18 || dy > 16) continue;
+
+      if (airborne) {
+        // Jump over dog → pee
+        if (n.dogState !== "pee") {
+          n.dogState = "pee";
+          n.dogTimer = 1.4;
+          this.style += 8;
+          this.toast("…");
+        }
+      } else if (n.dogState === "walk") {
+        // Ski through dog → woof (pause, no full crash)
+        n.dogState = "woof";
+        n.dogTimer = 0.7;
+        this.toast("Woof!");
+        // slight slowdown
+        p.vx *= 0.5;
+        p.vy *= 0.7;
+      }
+    }
 
     for (const o of this.world.obstacles) {
       const dx = Math.abs(p.x - o.x);
       const dy = Math.abs(p.y - o.y);
-      // Feet/skis collision box (original hitboxes are small relative to sprite)
-      if (dx > o.hw + 6 || dy > o.hh + 8) continue;
+      if (dx > o.hw + 8 || dy > o.hh + 10) continue;
 
-      if (o.type === "jump" && p.vy > 50) {
+      // Jump ramp
+      if (o.type === "jump" && !airborne && p.vy > 40) {
         launchPlayer(p, p.character === "snowboarder" ? 1.25 : 1);
         this.style += 5;
         this.toast("Jump!");
+        continue;
+      }
+
+      // Jump over leafless tree → fire
+      if (o.type === "deadTree" && airborne) {
+        if (!o.onFire) {
+          this.world.igniteDeadTree(o);
+          this.style += 12;
+          this.toast("🔥");
+        }
+        continue; // clear the jump — no crash
+      }
+
+      // Jumping over solid trees: still crash if you hit trunk while airborne low
+      // (only dead trees ignite; live trees hurt)
+      if (airborne && o.solid && o.type !== "deadTree") {
+        // High enough air clears most; low air still hits
+        if (p.airborne < 0.2) {
+          crashPlayer(p);
+          this.style = Math.max(0, this.style - 5);
+          this.toast("Ouch!");
+          return;
+        }
         continue;
       }
 
@@ -249,7 +321,7 @@ export class Game {
         return;
       }
 
-      if (o.solid) {
+      if (o.solid && !airborne) {
         crashPlayer(p);
         this.style = Math.max(0, this.style - 5);
         this.toast("Ouch!");
@@ -257,6 +329,8 @@ export class Game {
       }
     }
 
+    // Gates
+    if (airborne) return;
     const flags = this.world.obstacles.filter(
       (o) => (o.type === "slalomFlagL" || o.type === "slalomFlagR") && !o.passed,
     );
@@ -308,7 +382,6 @@ export class Game {
     const dx = this.player.x - y.x;
     const dy = this.player.y - y.y;
     const dist = Math.hypot(dx, dy) || 1;
-    // Slightly faster than max skier tuck
     const speed = 210;
     y.vx = (dx / dist) * speed;
     y.vy = (dy / dist) * speed * 0.95;

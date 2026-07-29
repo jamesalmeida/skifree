@@ -29,6 +29,12 @@ export type ObstacleType =
   | "slalomFlagR"
   | "finish";
 
+/** Crash animation: buried under snow → sit up */
+export type CrashPhase = "none" | "ouch" | "sit";
+
+/** Air trick pose: 0 = upright/jumping, 1–2 = backflip frames */
+export type FlipPose = 0 | 1 | 2;
+
 export interface Vec2 {
   x: number;
   y: number;
@@ -44,17 +50,25 @@ export interface Obstacle {
   passed?: boolean;
   solid: boolean;
   scale?: number;
+  /** Dead tree ignited by jumping over it */
+  onFire?: boolean;
+  fireFrame?: number;
+  fireT?: number;
 }
 
 export interface NPC {
   id: number;
-  kind: "skier" | "snowboarder";
+  kind: "skier" | "snowboarder" | "dog";
   x: number;
   y: number;
   vx: number;
   vy: number;
   dir: Direction;
   color: number;
+  /** dog: walking | paused woof | peeing */
+  dogState?: "walk" | "woof" | "pee";
+  dogTimer?: number;
+  dogFrame?: number;
 }
 
 export interface Player {
@@ -67,6 +81,13 @@ export interface Player {
   airborne: number;
   crashTimer: number;
   invuln: number;
+  /** Backflip animation frame while airborne */
+  flipPose: FlipPose;
+  /** Total up-presses while in this air time (3 = full flip) */
+  flipPresses: number;
+  crashPhase: CrashPhase;
+  /** Completed backflips this air (for style / double-flip) */
+  flipsThisAir: number;
 }
 
 export interface GameConfig {
@@ -100,7 +121,6 @@ export interface GameSnapshot {
   gatesPassed: number;
   gatesTotal: number;
   message: string | null;
-  /** For classic mouse cursor drawing */
   mouseX: number | null;
   mouseY: number | null;
 }

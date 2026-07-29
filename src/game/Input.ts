@@ -4,18 +4,19 @@ export class Input {
   mouseY = 0;
   mouseInCanvas = false;
   private justPressed = new Set<string>();
+  private mouseJustClicked = false;
 
   constructor(private canvas: HTMLCanvasElement) {
     window.addEventListener("keydown", this.onKeyDown);
     window.addEventListener("keyup", this.onKeyUp);
     canvas.addEventListener("mousemove", this.onMouseMove);
+    canvas.addEventListener("mousedown", this.onMouseDown);
     canvas.addEventListener("mouseenter", () => {
       this.mouseInCanvas = true;
     });
     canvas.addEventListener("mouseleave", () => {
       this.mouseInCanvas = false;
     });
-    // Prevent browser chrome for game keys
     window.addEventListener("keydown", (e) => {
       if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", " "].includes(e.key)) {
         e.preventDefault();
@@ -32,11 +33,9 @@ export class Input {
     const k = e.key.toLowerCase();
     if (!this.keys.has(k)) this.justPressed.add(k);
     this.keys.add(k);
-    // Track by code for F-keys / numpad (stable even when key is "arrowleft" vs "4")
     const code = e.code.toLowerCase();
     if (!this.keys.has(code)) this.justPressed.add(code);
     this.keys.add(code);
-    // Numpad digits also as "numpadN" aliases when browser reports Digit
     if (code.startsWith("numpad")) {
       if (!this.keys.has(code)) this.justPressed.add(code);
       this.keys.add(code);
@@ -54,6 +53,10 @@ export class Input {
     this.mouseY = e.clientY - rect.top;
   };
 
+  private onMouseDown = (e: MouseEvent) => {
+    if (e.button === 0) this.mouseJustClicked = true;
+  };
+
   isDown(key: string) {
     return this.keys.has(key.toLowerCase());
   }
@@ -62,7 +65,18 @@ export class Input {
     return this.justPressed.has(key.toLowerCase());
   }
 
+  /** Space or left-click this frame */
+  jumpPressed() {
+    return (
+      this.wasPressed(" ") ||
+      this.wasPressed("space") ||
+      this.wasPressed("spacebar") ||
+      this.mouseJustClicked
+    );
+  }
+
   endFrame() {
     this.justPressed.clear();
+    this.mouseJustClicked = false;
   }
 }
