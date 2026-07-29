@@ -33,18 +33,19 @@ export const DIR_ORDER = [
 
 /**
  * Velocity in original pixels / second for each DIR_ORDER entry.
- * Reconstructed for classic feel (no clean LUT in data segment;
- * magnitudes chosen so south is fastest and edges nearly flat).
+ *
+ * Classic SkiFree: full west/east digs the edges in and **stops** (no
+ * continuous sideways slide). Diagonals still move; pure south is fastest.
  * ~5–6 px/frame at 30 Hz for full tuck.
  */
 export const VELOCITY_PX_S: ReadonlyArray<{ x: number; y: number }> = [
-  { x: -110, y: 8 }, // west — shuffle
-  { x: -95, y: 70 }, // wsWest
+  { x: 0, y: 0 }, // west — full edge stop (original)
+  { x: -70, y: 55 }, // wsWest — slow carve
   { x: -55, y: 130 }, // sWest
   { x: 0, y: 175 }, // south
   { x: 55, y: 130 }, // sEast
-  { x: 95, y: 70 }, // esEast
-  { x: 110, y: 8 }, // east
+  { x: 70, y: 55 }, // esEast — slow carve
+  { x: 0, y: 0 }, // east — full edge stop (original)
 ];
 
 /** Snowboarder multipliers vs skier (not in original as playable; tuned for fun). */
