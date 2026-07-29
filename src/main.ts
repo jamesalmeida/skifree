@@ -22,6 +22,7 @@ const statTime = document.getElementById("stat-time")!;
 const statDist = document.getElementById("stat-dist")!;
 const statSpeed = document.getElementById("stat-speed")!;
 const statStyle = document.getElementById("stat-style")!;
+const statDir = document.getElementById("stat-dir")!;
 const charHint = document.getElementById("char-hint")!;
 
 const gameoverTitle = document.getElementById("gameover-title")!;
@@ -191,6 +192,7 @@ async function boot() {
       statDist.textContent = String(Math.floor(snap.distance));
       statSpeed.textContent = snap.speed.toFixed(0);
       statStyle.textContent = String(snap.style);
+      statDir.textContent = `${snap.player.dir}  vx=${snap.player.vx.toFixed(0)} vy=${snap.player.vy.toFixed(0)}`;
       if (snap.message) {
         toastEl.textContent = snap.message;
         toastEl.classList.add("show");

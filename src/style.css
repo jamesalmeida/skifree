@@ -58,6 +58,14 @@ body,
   box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.15);
 }
 
+#stats .dir-debug {
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px dashed #cbd5e0;
+  color: #718096;
+  font-size: 12px;
+}
+
 #hud-toast {
   position: absolute;
   top: 50%;
