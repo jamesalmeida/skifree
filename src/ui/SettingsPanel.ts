@@ -97,8 +97,8 @@ const FIELDS: Field[] = [
   },
   {
     key: "jumpMs",
-    label: "Jump air (ms)",
-    hint: "Air time off ramps / free jump",
+    label: "Jump air @ full speed (ms)",
+    hint: "Hangtime when launching at full south speed; slower = shorter air",
     min: 300,
     max: 2000,
     step: 50,

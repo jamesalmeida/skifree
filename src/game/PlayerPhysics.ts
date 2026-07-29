@@ -8,6 +8,7 @@ import {
   MOUSE_DIR_THRESHOLDS,
   SNOWBOARD_EDGE_MUL,
   SNOWBOARD_SPEED_MUL,
+  SOUTH_SPEED_PX,
   TURN_STEP_MS,
   VELOCITY_PX_S,
 } from "./originalConstants";
@@ -142,9 +143,8 @@ export function updatePlayer(player: Player, input: SteerInput, dt: number) {
   if (player.airborne > 0) {
     player.airborne -= dt;
 
-    // OG: always fly straight down once airborne (no air steering for angle)
+    // OG: always fly straight down; keep launch speed (don't re-clamp every frame)
     player.vx = 0;
-    player.vy = Math.max(player.vy, JUMP_SPEED_PX * 0.85);
 
     // Space/click OR ↑ advances backflip
     if (input.upPressed || input.jumpPressed) {
@@ -172,7 +172,7 @@ export function updatePlayer(player: Player, input: SteerInput, dt: number) {
     return;
   }
 
-  // Ground jump — always launches straight down
+  // Ground jump — always launches straight down; hangtime from approach speed
   if (input.jumpPressed) {
     launchPlayer(player, player.character === "snowboarder" ? 1.1 : 1);
     return;
@@ -342,10 +342,27 @@ export function crashPlayer(player: Player, duration = CRASH_MS / 1000) {
   player.scootKind = "none";
 }
 
-/** Always launches straight down the fall line (OG behavior). */
+/**
+ * Always launches straight down the fall line.
+ * Hangtime scales with approach speed: full tuck (~south) gets the longest
+ * air (room for multi flips); slow approach = short hop.
+ */
 export function launchPlayer(player: Player, boost = 1) {
   if (player.crashTimer > 0) return;
-  player.airborne = (JUMP_MS / 1000) * (0.9 + 0.25 * boost);
+
+  const approach = Math.hypot(player.vx, player.vy);
+  const ref = Math.max(1, SOUTH_SPEED_PX);
+  // 0 at standstill → 1 at full south → a bit over 1 if already boosted
+  const speedT = Math.max(0.15, Math.min(1.35, approach / ref));
+
+  // jumpMs is hangtime at full south; scale down when slower
+  // speedT=1 → ~1.05× base, speedT=0.33 (~6 m/s) → ~0.5× base, speedT=1.35 → ~1.25×
+  const hangSec = (JUMP_MS / 1000) * (0.28 + 0.77 * speedT) * (0.95 + 0.2 * (boost - 1));
+  player.airborne = Math.max(0.22, hangSec);
+
+  // Air speed also scales a bit with approach (slow hop vs fast launch)
+  const airSpeed = JUMP_SPEED_PX * boost * (0.72 + 0.28 * Math.min(1, speedT));
+
   player.flipPose = 0;
   player.flipPresses = 0;
   player.flipsThisAir = 0;
@@ -353,6 +370,6 @@ export function launchPlayer(player: Player, boost = 1) {
   player.scootKind = "none";
 
   player.vx = 0;
-  player.vy = JUMP_SPEED_PX * boost;
+  player.vy = airSpeed;
   player.dir = "down";
 }
