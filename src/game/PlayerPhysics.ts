@@ -4,6 +4,7 @@ import {
   DIR_ORDER,
   EDGE_FRICTION,
   JUMP_MS,
+  JUMP_SPEED_PX,
   MOUSE_DIR_THRESHOLDS,
   SNOWBOARD_EDGE_MUL,
   SNOWBOARD_SPEED_MUL,
@@ -234,6 +235,18 @@ export function crashPlayer(player: Player, duration = CRASH_MS / 1000) {
 
 export function launchPlayer(player: Player, boost = 1) {
   player.airborne = (JUMP_MS / 1000) * (0.85 + 0.2 * boost);
-  player.vy = Math.max(player.vy, 160) * (1 + 0.12 * boost);
-  player.dir = "down";
+  // Classic: jumping straight boosts to ~26–27 m/s (tunable JUMP_SPEED_PX)
+  const target = JUMP_SPEED_PX * boost;
+  const mag = Math.hypot(player.vx, player.vy);
+  if (mag < 8 || player.dir === "down" || Math.abs(player.vx) < player.vy * 0.25) {
+    // Mostly tucking — pure downhill boost
+    player.vx = 0;
+    player.vy = target;
+    player.dir = "down";
+  } else {
+    // Keep carve direction, scale up to jump speed
+    const s = target / mag;
+    player.vx *= s;
+    player.vy *= s;
+  }
 }

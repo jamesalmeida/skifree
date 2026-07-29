@@ -27,17 +27,25 @@ const FIELDS: Field[] = [
     step: 0.1,
   },
   {
-    key: "southSpeed",
-    label: "South speed",
-    hint: "Tuck (↓) speed in px/s",
-    min: 60,
-    max: 320,
-    step: 5,
+    key: "southSpeedMs",
+    label: "South speed (m/s)",
+    hint: "Tuck (↓) ground speed — classic ~18",
+    min: 10,
+    max: 30,
+    step: 0.5,
+  },
+  {
+    key: "jumpSpeedMs",
+    label: "Jump speed (m/s)",
+    hint: "Peak speed off a ramp — classic ~26–27",
+    min: 18,
+    max: 40,
+    step: 0.5,
   },
   {
     key: "carveSpeedScale",
     label: "Carve scale",
-    hint: "wsWest / esEast speed multiplier",
+    hint: "Two-notch left/right speed scale (base ~6 m/s)",
     min: 0.3,
     max: 1.8,
     step: 0.05,
@@ -245,8 +253,11 @@ function setNumeric(key: keyof TunableSettings, v: number) {
     case "edgeFriction":
       settings.edgeFriction = v;
       break;
-    case "southSpeed":
-      settings.southSpeed = v;
+    case "southSpeedMs":
+      settings.southSpeedMs = v;
+      break;
+    case "jumpSpeedMs":
+      settings.jumpSpeedMs = v;
       break;
     case "carveSpeedScale":
       settings.carveSpeedScale = v;

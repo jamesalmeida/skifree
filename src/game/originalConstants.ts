@@ -2,8 +2,9 @@
  * All tunable game feel lives here (plus the settings panel / localStorage).
  * See tools/RE_NOTES.md for RE notes on originals.
  *
- * Code should import names from this module and read them at use-time
- * (ESM live bindings) so the settings panel can update them live.
+ * Speed HUD: m/s = hypot(vx, vy) / PIXELS_PER_METRE
+ * Defaults match classic SkiFree readouts:
+ *   south ~18, one notch ~13, two notches ~6, full edge ~0, jump ~26–27
  */
 
 export const DIR_ORDER = [
@@ -17,15 +18,20 @@ export const DIR_ORDER = [
 ] as const;
 
 export type TunableSettings = {
-  /** px per displayed metre */
+  /** px per displayed metre (HUD) */
   pixelsPerMetre: number;
   /** metres before yeti */
   yetiDistanceM: number;
   /** full-edge coast friction (higher = snappier stop) */
   edgeFriction: number;
-  /** south (tuck) speed px/s — other dirs scale from defaults */
-  southSpeed: number;
-  /** wsWest / esEast horizontal speed scale vs defaults */
+  /**
+   * South (tuck) ground speed in m/s (HUD).
+   * Other dirs are ratios of this (13/18, 6/18, 0).
+   */
+  southSpeedMs: number;
+  /** Jump peak speed in m/s when tucking off a ramp */
+  jumpSpeedMs: number;
+  /** wsWest / esEast speed scale vs default ratio */
   carveSpeedScale: number;
   snowboardSpeedMul: number;
   snowboardEdgeMul: number;
@@ -33,20 +39,18 @@ export type TunableSettings = {
   jumpMs: number;
   turnStepMs: number;
   classicScale: number;
-  /** mouse dead-zone radius (CSS px) for pure south */
   mouseDeadZone: number;
-  /** mouse distance for full hard left/right */
   mouseHardZone: number;
-  /** show Dir/vx/vy on HUD */
   showDirDebug: boolean;
 };
 
-/** Factory defaults — reset target */
+/** Factory defaults — classic SkiFree-ish speed readouts */
 export const DEFAULT_SETTINGS: TunableSettings = {
   pixelsPerMetre: 16,
   yetiDistanceM: 2000,
   edgeFriction: 3.8,
-  southSpeed: 175,
+  southSpeedMs: 18,
+  jumpSpeedMs: 26.5,
   carveSpeedScale: 1,
   snowboardSpeedMul: 1.15,
   snowboardEdgeMul: 0.9,
@@ -59,7 +63,8 @@ export const DEFAULT_SETTINGS: TunableSettings = {
   showDirDebug: true,
 };
 
-const STORAGE_KEY = "skifree-settings-v1";
+/** Bump when defaults change incompatibly so old localStorage doesn’t stick. */
+const STORAGE_KEY = "skifree-settings-v2";
 
 function clamp(n: number, lo: number, hi: number) {
   return Math.max(lo, Math.min(hi, n));
@@ -94,6 +99,10 @@ export let JUMP_MS = settings.jumpMs;
 export let TURN_STEP_MS = settings.turnStepMs;
 export let CLASSIC_SCALE = settings.classicScale;
 export let SHOW_DIR_DEBUG = settings.showDirDebug;
+/** Ground tuck speed (px/s) */
+export let SOUTH_SPEED_PX = settings.southSpeedMs * settings.pixelsPerMetre;
+/** Jump tuck speed (px/s) */
+export let JUMP_SPEED_PX = settings.jumpSpeedMs * settings.pixelsPerMetre;
 
 /** [hard, sharp, mild, dead] mouse thresholds in CSS px */
 export let MOUSE_DIR_THRESHOLDS: [number, number, number, number] = [
@@ -104,43 +113,50 @@ export let MOUSE_DIR_THRESHOLDS: [number, number, number, number] = [
 ];
 
 /**
- * Base direction vectors at default southSpeed=175; rebuilt when settings change.
- * Indices match DIR_ORDER.
+ * Direction velocities in px/s. Magnitudes target classic m/s at ppm=16:
+ *   edge 0, carve 6, diagonal 13, south 18
+ * Unit directions match prior carve angles.
  */
-const BASE_VEL = [
-  { x: 0, y: 0 },
-  { x: -70, y: 55 },
-  { x: -55, y: 130 },
-  { x: 0, y: 175 },
-  { x: 55, y: 130 },
-  { x: 70, y: 55 },
-  { x: 0, y: 0 },
-] as const;
-
-export let VELOCITY_PX_S: { x: number; y: number }[] = BASE_VEL.map((v) => ({ ...v }));
+export let VELOCITY_PX_S: { x: number; y: number }[] = [];
 
 function rebuildVelocity() {
-  const s = settings.southSpeed / 175;
-  const c = settings.carveSpeedScale;
+  const ppm = settings.pixelsPerMetre;
+  const south = settings.southSpeedMs * ppm; // 18 m/s → 288 px/s
+  // Ratios from original feel: 13/18 and 6/18
+  const diag = south * (13 / 18);
+  const carve = south * (6 / 18) * settings.carveSpeedScale;
+
+  // Unit vectors for diagonals / carves (from prior table angles)
+  // sWest ~ (-0.390, 0.921), wsWest ~ (-0.787, 0.618)
   VELOCITY_PX_S = [
-    { x: 0, y: 0 },
-    { x: -70 * s * c, y: 55 * s * c },
-    { x: -55 * s, y: 130 * s },
-    { x: 0, y: settings.southSpeed },
-    { x: 55 * s, y: 130 * s },
-    { x: 70 * s * c, y: 55 * s * c },
-    { x: 0, y: 0 },
+    { x: 0, y: 0 }, // west — coast to stop
+    { x: -0.787 * carve, y: 0.618 * carve }, // wsWest ~6 m/s
+    { x: -0.39 * diag, y: 0.921 * diag }, // sWest ~13 m/s
+    { x: 0, y: south }, // south ~18 m/s
+    { x: 0.39 * diag, y: 0.921 * diag }, // sEast ~13 m/s
+    { x: 0.787 * carve, y: 0.618 * carve }, // esEast ~6 m/s
+    { x: 0, y: 0 }, // east — coast to stop
   ];
+
+  SOUTH_SPEED_PX = south;
+  JUMP_SPEED_PX = settings.jumpSpeedMs * ppm;
 }
 
 /** Push `settings` into live export bindings. */
 export function applySettings(partial?: Partial<TunableSettings>) {
   if (partial) Object.assign(settings, partial);
 
+  // Migrate old southSpeed (px) key if someone had v1 leftovers in a partial
+  const legacy = settings as TunableSettings & { southSpeed?: number };
+  if (legacy.southSpeed != null && legacy.southSpeedMs == null) {
+    settings.southSpeedMs = legacy.southSpeed / 16;
+  }
+
   settings.pixelsPerMetre = clamp(settings.pixelsPerMetre, 4, 64);
   settings.yetiDistanceM = clamp(settings.yetiDistanceM, 200, 10000);
   settings.edgeFriction = clamp(settings.edgeFriction, 0.5, 20);
-  settings.southSpeed = clamp(settings.southSpeed, 40, 400);
+  settings.southSpeedMs = clamp(settings.southSpeedMs, 8, 40);
+  settings.jumpSpeedMs = clamp(settings.jumpSpeedMs, 12, 50);
   settings.carveSpeedScale = clamp(settings.carveSpeedScale, 0.2, 2);
   settings.snowboardSpeedMul = clamp(settings.snowboardSpeedMul, 0.5, 2.5);
   settings.snowboardEdgeMul = clamp(settings.snowboardEdgeMul, 0.3, 1.5);
