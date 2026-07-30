@@ -1,6 +1,7 @@
 import type {
   CharacterType,
   GameConfig,
+  GameMode,
   GameSnapshot,
   GameState,
   GraphicsMode,
@@ -50,10 +51,16 @@ export class Game {
   input: Input;
   private lastTs = 0;
   private onChange: (() => void) | null = null;
+  /** Menu attract-mode wander / jump timers */
+  private demoWander = 0;
+  private demoJumpCd = 0;
+  private demoSteerX = 0;
 
   static readonly TURBO_SCALE = 2;
   /** OG miss-gate penalty */
   static readonly GATE_PENALTY_MS = 5000;
+  /** Restart attract loop after this much downhill (metres) if yeti hasn't caught us */
+  static readonly DEMO_LOOP_M = 2800;
 
   constructor(canvas: HTMLCanvasElement, config: GameConfig) {
     this.canvas = canvas;
@@ -61,6 +68,7 @@ export class Game {
     this.world = new World(config.mode);
     this.player = createPlayer(config.character);
     this.input = new Input(canvas);
+    this.resetDemo();
   }
 
   setOnChange(cb: () => void) {
@@ -87,7 +95,34 @@ export class Game {
 
   goMenu() {
     this.state = "menu";
+    this.resetDemo();
     this.notify();
+  }
+
+  /** Update mode from the main menu; restarts the background demo. */
+  setMode(mode: GameMode) {
+    this.config.mode = mode;
+    if (this.state === "menu") this.resetDemo();
+    this.notify();
+  }
+
+  /** Fresh attract-mode run behind the main menu. */
+  private resetDemo() {
+    this.world = new World(this.config.mode);
+    this.player = createPlayer(this.config.character);
+    this.yeti = null;
+    this.timeMs = 0;
+    this.style = 0;
+    this.gatesPassed = 0;
+    this.gatesMissed = 0;
+    this.penaltyMs = 0;
+    this.message = null;
+    this.messageTimer = 0;
+    this.timeScale = 1;
+    this.demoWander = 0;
+    this.demoJumpCd = 0.8 + Math.random() * 1.2;
+    this.demoSteerX = 0;
+    this.lastTs = performance.now();
   }
 
   togglePause() {
@@ -112,7 +147,11 @@ export class Game {
       this.player.character = c;
       this.toast(c === "snowboarder" ? "Snowboard mode!" : "Ski mode!");
       this.notify();
-    } else if (this.state === "menu" || this.state === "paused") {
+    } else if (this.state === "menu") {
+      this.config.character = c;
+      this.resetDemo();
+      this.notify();
+    } else if (this.state === "paused") {
       this.config.character = c;
       this.player.character = c;
       this.notify();
@@ -154,7 +193,8 @@ export class Game {
       return;
     }
 
-    if (this.state !== "playing") {
+    const demo = this.state === "menu";
+    if (this.state !== "playing" && !demo) {
       this.input.endFrame();
       return;
     }
@@ -167,27 +207,27 @@ export class Game {
 
     const wasAir = this.player.airborne > 0;
     const flipsBefore = this.player.flipsThisAir;
-    const steer = this.readSteer();
+    const steer = demo ? this.demoSteer(dt) : this.readSteer();
     const prevDir = this.player.dir;
     // Must apply before move — physics rewrites vx/vy every frame
     const speedMul = this.slowSnowSpeedMul();
     updatePlayer(this.player, steer, dt, { speedMul });
 
-    if (prevDir !== this.player.dir && this.player.vy > 40) {
-      this.style += this.player.character === "snowboarder" ? 2 : 1;
-    }
-    if (this.player.airborne > 0) {
-      this.style += Math.floor(dt * 6);
-    }
-    // Style for completed flips
-    if (this.player.flipsThisAir > flipsBefore) {
-      this.style += 15 * (this.player.flipsThisAir - flipsBefore);
-      if (this.player.flipsThisAir >= 2) this.toast("Double flip!");
-      else this.toast("Backflip!");
-    }
-    // Landing style
-    if (wasAir && this.player.airborne <= 0 && this.player.crashTimer <= 0 && flipsBefore > 0) {
-      this.style += 10 * flipsBefore;
+    if (!demo) {
+      if (prevDir !== this.player.dir && this.player.vy > 40) {
+        this.style += this.player.character === "snowboarder" ? 2 : 1;
+      }
+      if (this.player.airborne > 0) {
+        this.style += Math.floor(dt * 6);
+      }
+      if (this.player.flipsThisAir > flipsBefore) {
+        this.style += 15 * (this.player.flipsThisAir - flipsBefore);
+        if (this.player.flipsThisAir >= 2) this.toast("Double flip!");
+        else this.toast("Backflip!");
+      }
+      if (wasAir && this.player.airborne <= 0 && this.player.crashTimer <= 0 && flipsBefore > 0) {
+        this.style += 10 * flipsBefore;
+      }
     }
 
     this.world.updateNpcs(dt, this.player.y);
@@ -195,14 +235,82 @@ export class Game {
     this.world.ensureGenerated(this.player.y);
     this.world.updateFires(dt);
     this.handleCollisions();
-    this.updateYeti(dt);
+    // Demo may have reset on finish; only chase yeti if still in this run
+    if (this.state === "playing" || this.state === "menu") {
+      this.updateYeti(dt);
+    }
 
-    if (this.messageTimer > 0) {
+    if (demo) {
+      if (
+        this.state === "menu" &&
+        this.player.y / PIXELS_PER_METRE >= Game.DEMO_LOOP_M
+      ) {
+        this.resetDemo();
+      }
+      this.message = null;
+      this.messageTimer = 0;
+    } else if (this.messageTimer > 0) {
       this.messageTimer -= dt;
       if (this.messageTimer <= 0) this.message = null;
     }
 
     this.input.endFrame();
+  }
+
+  /** Simple obstacle-avoiding AI for the main-menu background loop. */
+  private demoSteer(dt: number): SteerInput {
+    const p = this.player;
+    this.demoJumpCd -= dt;
+    this.demoWander += dt;
+
+    // Slow wander left/right so the run isn't a straight line
+    if (this.demoWander > 0.7 + Math.random() * 0.9) {
+      this.demoWander = 0;
+      this.demoSteerX = (Math.random() - 0.5) * 110;
+    }
+
+    let avoid = 0;
+    let jumpSoon = false;
+    for (const o of this.world.obstacles) {
+      const dy = o.y - p.y;
+      if (dy < 8 || dy > 200) continue;
+      const dx = o.x - p.x;
+      if (o.type === "jump" && Math.abs(dx) < 36 && dy < 90) {
+        jumpSoon = true;
+      }
+      if (!o.solid) continue;
+      if (Math.abs(dx) > 56) continue;
+      const near = 1 - dy / 200;
+      const side = 1 - Math.abs(dx) / 56;
+      const push = near * side;
+      // Steer away from the obstacle
+      avoid += (dx >= 0 ? -1 : 1) * push * 95;
+    }
+
+    // Gentle pull back toward the mountain center
+    const centerPull = -p.x * 0.08;
+    const mouseDx = this.demoSteerX + avoid + centerPull;
+
+    let jumpPressed = false;
+    if (p.airborne > 0.05) {
+      // Occasional flip while airborne
+      jumpPressed = Math.random() < dt * 2.2;
+    } else if (this.demoJumpCd <= 0 && (jumpSoon || Math.random() < dt * 0.35)) {
+      jumpPressed = true;
+      this.demoJumpCd = 1.1 + Math.random() * 1.8;
+    }
+
+    return {
+      left: false,
+      right: false,
+      up: false,
+      down: false,
+      mouseDx,
+      leftPressed: false,
+      rightPressed: false,
+      jumpPressed,
+      upPressed: jumpPressed && p.airborne > 0.05,
+    };
   }
 
   private readSteer(): SteerInput {
@@ -393,6 +501,10 @@ export class Game {
 
       if (o.type === "finish" && !o.passed) {
         o.passed = true;
+        if (this.state === "menu") {
+          this.resetDemo();
+          return;
+        }
         this.state = "finished";
         this.toast("Finish!");
         this.notify();
@@ -531,6 +643,10 @@ export class Game {
     y.y += y.vy * dt;
 
     if (dist < 28 && this.player.crashTimer <= 0) {
+      if (this.state === "menu") {
+        this.resetDemo();
+        return;
+      }
       y.eating = true;
       y.celebrating = false;
       y.frame = 0;
@@ -598,13 +714,17 @@ export class Game {
       gatesTotal: this.world.gatesTotal,
       penaltyMs: this.penaltyMs,
       message: this.message,
-      // Hide classic cursor while touch-steering (finger isn't a mouse pointer)
+      // Hide classic cursor while touch-steering or during menu demo
       mouseX:
-        this.input.mouseInCanvas && !this.input.touchSteering
+        this.state !== "menu" &&
+        this.input.mouseInCanvas &&
+        !this.input.touchSteering
           ? this.input.mouseX
           : null,
       mouseY:
-        this.input.mouseInCanvas && !this.input.touchSteering
+        this.state !== "menu" &&
+        this.input.mouseInCanvas &&
+        !this.input.touchSteering
           ? this.input.mouseY
           : null,
       timeScale: this.timeScale,

@@ -68,6 +68,7 @@ function bindOptionRow<T extends string>(
 
 bindOptionRow<GameMode>("mode-row", "mode", (v) => {
   mode = v;
+  game.setMode(v);
 });
 bindOptionRow<CharacterType>("char-row", "char", (v) => {
   character = v;
@@ -75,6 +76,7 @@ bindOptionRow<CharacterType>("char-row", "char", (v) => {
     v === "snowboarder"
       ? "Ride the board: snappier edges, more air, style bonus."
       : "Classic two-ski control (original sprites from SKI.EXE).";
+  game.setCharacter(v);
 });
 bindOptionRow<GraphicsMode>("gfx-row", "gfx", (v) => {
   applyGraphics(v);
@@ -293,6 +295,7 @@ async function boot() {
       if (gameoverOverlay.classList.contains("hidden")) syncUi();
     }
 
+    // Always render — including menu attract-mode demo behind the panel
     if (snap.graphics === "3d") {
       modern.render(snap);
     } else {

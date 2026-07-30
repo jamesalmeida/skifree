@@ -450,10 +450,16 @@ body,
   z-index: 10;
   display: grid;
   place-items: center;
-  background:
-    radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.35), transparent 40%),
-    radial-gradient(circle at 80% 10%, rgba(147, 197, 253, 0.35), transparent 35%),
-    linear-gradient(180deg, #dbeafe 0%, #f8fafc 45%, #e2e8f0 100%);
+  /* Transparent so the attract-mode run shows through */
+  background: transparent;
+  pointer-events: none;
+}
+
+#menu .menu-panel {
+  pointer-events: auto;
+  box-shadow:
+    6px 6px 0 rgba(15, 23, 42, 0.18),
+    0 12px 40px rgba(15, 23, 42, 0.22);
 }
 
 #pause-overlay {
