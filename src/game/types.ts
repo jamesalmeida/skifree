@@ -24,10 +24,16 @@ export type ObstacleType =
   | "rock"
   | "stump"
   | "jump"
-  | "mushroom"
   | "slalomFlagL"
   | "slalomFlagR"
-  | "finish";
+  | "finish"
+  /** Soft powder mounds that slow you (EXE #27 “cloud”) */
+  | "slowSnow"
+  /** Ski lift scenery */
+  | "liftPole"
+  | "liftEmpty"
+  | "liftPerson"
+  | "liftPair";
 
 /** Crash animation: buried under snow → sit up */
 export type CrashPhase = "none" | "ouch" | "sit";
@@ -40,6 +46,9 @@ export interface Vec2 {
   y: number;
 }
 
+/** Slalom gate color (alternating red / blue). */
+export type GateColor = "red" | "blue";
+
 export interface Obstacle {
   id: number;
   type: ObstacleType;
@@ -47,6 +56,7 @@ export interface Obstacle {
   y: number;
   hw: number;
   hh: number;
+  /** Gate/finish resolved (passed correctly or missed) */
   passed?: boolean;
   solid: boolean;
   scale?: number;
@@ -54,6 +64,12 @@ export interface Obstacle {
   onFire?: boolean;
   fireFrame?: number;
   fireT?: number;
+  /** Slalom: red (←) or blue (→) single marker */
+  gateColor?: GateColor;
+  /** Slalom: which gate number (0-based) */
+  gateIndex?: number;
+  /** True if this gate was missed / wrong side */
+  gateMissed?: boolean;
 }
 
 export interface NPC {
@@ -117,6 +133,8 @@ export interface GameSnapshot {
     vy: number;
     frame: number;
     eating: boolean;
+    /** After swallow — loops joy hop forever */
+    celebrating: boolean;
   } | null;
   cameraY: number;
   timeMs: number;
@@ -126,8 +144,13 @@ export interface GameSnapshot {
   mode: GameMode;
   graphics: GraphicsMode;
   gatesPassed: number;
+  gatesMissed: number;
   gatesTotal: number;
+  /** Cumulative +5s penalties from missed gates (ms) */
+  penaltyMs: number;
   message: string | null;
   mouseX: number | null;
   mouseY: number | null;
+  /** OG F turbo: 1 normal, 2 fast */
+  timeScale: number;
 }

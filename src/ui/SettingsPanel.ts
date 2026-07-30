@@ -19,7 +19,7 @@ type Field = {
   max: number;
   step: number;
   kind?: "number" | "bool";
-  group: "motion" | "timing" | "world" | "input" | "debug";
+  group: "general" | "motion" | "timing" | "world" | "input";
 };
 
 const FIELDS: Field[] = [
@@ -150,6 +150,16 @@ const FIELDS: Field[] = [
     group: "input",
   },
   {
+    key: "enhancedAnimations",
+    label: "Enhanced animations",
+    hint: "Particle snow spray when tucking south (off = classic sprite-only)",
+    min: 0,
+    max: 1,
+    step: 1,
+    kind: "bool",
+    group: "general",
+  },
+  {
     key: "showDirDebug",
     label: "Show Dir debug",
     hint: "HUD line with dir / vx / vy",
@@ -157,19 +167,19 @@ const FIELDS: Field[] = [
     max: 1,
     step: 1,
     kind: "bool",
-    group: "debug",
+    group: "general",
   },
 ];
 
 const GROUP_LABELS: Record<Field["group"], string> = {
+  general: "Options",
   motion: "Motion & speed",
   timing: "Timing",
   world: "World & display",
   input: "Mouse",
-  debug: "HUD",
 };
 
-type TabId = "feel" | "sprites";
+type TabId = "general" | "feel" | "sprites";
 
 export function initSettingsPanel(onChange?: () => void) {
   const gear = document.getElementById("settings-gear")!;
@@ -177,13 +187,15 @@ export function initSettingsPanel(onChange?: () => void) {
   const closeBtn = document.getElementById("settings-close")!;
   const resetBtn = document.getElementById("settings-reset")!;
   const backdrop = document.getElementById("settings-backdrop")!;
+  const generalRoot = document.getElementById("settings-general")!;
   const feelRoot = document.getElementById("settings-feel")!;
   const spritesRoot = document.getElementById("settings-sprites")!;
+  const tabGeneral = document.getElementById("tab-general")!;
   const tabFeel = document.getElementById("tab-feel")!;
   const tabSprites = document.getElementById("tab-sprites")!;
   const titleEl = document.getElementById("settings-title")!;
 
-  let activeTab: TabId = "feel";
+  let activeTab: TabId = "general";
   let animRaf = 0;
   let animRunning = false;
 
@@ -200,23 +212,35 @@ export function initSettingsPanel(onChange?: () => void) {
     return s;
   }
 
-  // ── Build Game feel tab ──
-  feelRoot.innerHTML = "";
-  const groups = (["motion", "timing", "world", "input", "debug"] as const).filter((g) =>
-    FIELDS.some((f) => f.group === g),
-  );
-  for (const g of groups) {
-    const section = document.createElement("section");
-    section.className = "settings-section";
-    section.innerHTML = `<h3 class="settings-section-title">${GROUP_LABELS[g]}</h3>`;
-    const body = document.createElement("div");
-    body.className = "settings-section-body";
-    for (const f of FIELDS.filter((x) => x.group === g)) {
-      body.appendChild(buildFieldRow(f, onChange));
+  function appendFieldGroups(
+    root: HTMLElement,
+    groupIds: Field["group"][],
+    clear = true,
+  ) {
+    if (clear) {
+      // Keep intro paragraph if present
+      const intro = root.querySelector(".settings-intro");
+      root.innerHTML = "";
+      if (intro) root.appendChild(intro);
     }
-    section.appendChild(body);
-    feelRoot.appendChild(section);
+    for (const g of groupIds) {
+      if (!FIELDS.some((f) => f.group === g)) continue;
+      const section = document.createElement("section");
+      section.className = "settings-section";
+      section.innerHTML = `<h3 class="settings-section-title">${GROUP_LABELS[g]}</h3>`;
+      const body = document.createElement("div");
+      body.className = "settings-section-body";
+      for (const f of FIELDS.filter((x) => x.group === g)) {
+        body.appendChild(buildFieldRow(f, onChange));
+      }
+      section.appendChild(body);
+      root.appendChild(section);
+    }
   }
+
+  // ── Build Settings (general) + Game feel tabs ──
+  appendFieldGroups(generalRoot, ["general"]);
+  appendFieldGroups(feelRoot, ["motion", "timing", "world", "input"]);
 
   // ── Build Sprites tab (filled on open so preload is done) ──
   function buildSpriteBrowser() {
@@ -258,10 +282,14 @@ export function initSettingsPanel(onChange?: () => void) {
       const btnCopy = card.querySelector(".sprite-copy") as HTMLButtonElement;
 
       const refresh = () => {
-        const key = anim.keys[st.frame] ?? anim.keys[0]!;
+        const fi = ((st.frame % anim.keys.length) + anim.keys.length) % anim.keys.length;
+        st.frame = fi;
+        const key = anim.keys[fi] ?? anim.keys[0]!;
+        card.dataset.currentKey = key;
+        card.dataset.currentFrame = String(fi + 1);
         drawSpriteOnCanvas(canvas, key);
         frameLabel.textContent = st.paused
-          ? `[${st.frame + 1}/${anim.keys.length}] ${key}`
+          ? `[${fi + 1}/${anim.keys.length}] ${key}`
           : anim.keys.join(" → ");
         btnPause.textContent = st.paused ? "▶" : "⏸";
         card.classList.toggle("is-paused", st.paused);
@@ -289,9 +317,11 @@ export function initSettingsPanel(onChange?: () => void) {
       });
       btnCopy.addEventListener("click", async (e) => {
         e.stopPropagation();
-        const key = anim.keys[st.frame] ?? anim.keys[0]!;
+        // Always copy what is actually on the canvas (dataset kept in sync)
+        const key = card.dataset.currentKey ?? anim.keys[st.frame] ?? anim.keys[0]!;
+        const frameNum = card.dataset.currentFrame ?? String(st.frame + 1);
         const text = st.paused
-          ? `${anim.id}:${key} (frame ${st.frame + 1}/${anim.keys.length})`
+          ? `${anim.id}:${key} (frame ${frameNum}/${anim.keys.length})`
           : anim.id;
         await copyText(text, btnCopy);
       });
@@ -377,6 +407,8 @@ export function initSettingsPanel(onChange?: () => void) {
       const frameLabel = card.querySelector(".anim-frame-label") as HTMLElement | null;
       st.frame = Math.floor((t / 1000) * anim.fps) % anim.keys.length;
       const key = anim.keys[st.frame]!;
+      card.dataset.currentKey = key;
+      card.dataset.currentFrame = String(st.frame + 1);
       drawSpriteOnCanvas(canvas, key);
       if (frameLabel) frameLabel.textContent = anim.keys.join(" → ");
     }
@@ -413,11 +445,14 @@ export function initSettingsPanel(onChange?: () => void) {
 
   function setTab(tab: TabId) {
     activeTab = tab;
+    tabGeneral.classList.toggle("active", tab === "general");
     tabFeel.classList.toggle("active", tab === "feel");
     tabSprites.classList.toggle("active", tab === "sprites");
+    generalRoot.classList.toggle("hidden", tab !== "general");
     feelRoot.classList.toggle("hidden", tab !== "feel");
     spritesRoot.classList.toggle("hidden", tab !== "sprites");
-    titleEl.textContent = tab === "feel" ? "Game feel" : "Sprites";
+    // Modal title always "Settings" — do not mirror the active tab name
+    titleEl.textContent = "Settings";
     resetBtn.style.display = tab === "feel" ? "" : "none";
     if (tab === "sprites") {
       buildSpriteBrowser();
@@ -427,6 +462,7 @@ export function initSettingsPanel(onChange?: () => void) {
     }
   }
 
+  tabGeneral.addEventListener("click", () => setTab("general"));
   tabFeel.addEventListener("click", () => setTab("feel"));
   tabSprites.addEventListener("click", () => setTab("sprites"));
 
@@ -489,7 +525,8 @@ function buildFieldRow(f: Field, onChange?: () => void): HTMLElement {
       <p class="settings-hint">${f.hint}</p>`;
     const input = row.querySelector("input") as HTMLInputElement;
     input.addEventListener("change", () => {
-      settings.showDirDebug = input.checked;
+      if (f.key === "showDirDebug") settings.showDirDebug = input.checked;
+      else if (f.key === "enhancedAnimations") settings.enhancedAnimations = input.checked;
       saveSettings();
       onChange?.();
     });

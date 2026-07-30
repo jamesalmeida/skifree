@@ -28,8 +28,8 @@
           <section class="option-group">
             <label>Mode</label>
             <div class="btn-row" id="mode-row">
-              <button type="button" data-mode="slalom" class="opt active">Slalom</button>
-              <button type="button" data-mode="freestyle" class="opt">Free Style</button>
+              <button type="button" data-mode="freestyle" class="opt active">Free Style</button>
+              <button type="button" data-mode="slalom" class="opt">Slalom</button>
               <button type="button" data-mode="tree" class="opt">Tree Slalom</button>
             </div>
           </section>
@@ -63,8 +63,8 @@
           <button type="button" id="start-btn" class="start">Start run</button>
 
           <div class="help" id="controls-help">
-            <p><kbd>←</kbd><kbd>→</kbd> steer · <kbd>↑</kbd> brake / air flip · <kbd>↓</kbd> tuck · <kbd>Space</kbd> jump</p>
-            <p><kbd>F2</kbd> restart · <kbd>F3</kbd> / <kbd>P</kbd> pause · <kbd>G</kbd> graphics · <kbd>C</kbd> character</p>
+            <p><kbd>←</kbd><kbd>→</kbd> / <kbd>A</kbd><kbd>D</kbd> steer · <kbd>↑</kbd> brake / flip · <kbd>↓</kbd> / <kbd>S</kbd> tuck · <kbd>Space</kbd> jump</p>
+            <p><kbd>F</kbd> turbo · <kbd>F2</kbd> restart · <kbd>F3</kbd> / <kbd>P</kbd> pause · <kbd>G</kbd> gfx · <kbd>C</kbd> char</p>
           </div>
 
           <button type="button" id="settings-gear" class="settings-gear" title="Fine-tune game feel" aria-label="Settings">
@@ -76,15 +76,19 @@
       <div id="settings-backdrop" class="hidden"></div>
       <div id="settings-panel" class="hidden" role="dialog" aria-labelledby="settings-title">
         <div class="settings-header">
-          <h2 id="settings-title">Game feel</h2>
+          <h2 id="settings-title">Settings</h2>
           <button type="button" id="settings-close" class="settings-x" aria-label="Close">×</button>
         </div>
         <div class="settings-tabs" role="tablist">
-          <button type="button" id="tab-feel" class="settings-tab active" role="tab">Game feel</button>
+          <button type="button" id="tab-general" class="settings-tab active" role="tab">Settings</button>
+          <button type="button" id="tab-feel" class="settings-tab" role="tab">Game feel</button>
           <button type="button" id="tab-sprites" class="settings-tab" role="tab">Sprites</button>
         </div>
-        <div id="settings-feel" class="settings-tab-panel" role="tabpanel">
-          <p class="settings-intro">Tweaks apply live and save in this browser. Source: <code>originalConstants.ts</code>.</p>
+        <div id="settings-general" class="settings-tab-panel" role="tabpanel">
+          <p class="settings-intro">General options. Tweaks apply live and save in this browser.</p>
+        </div>
+        <div id="settings-feel" class="settings-tab-panel hidden" role="tabpanel">
+          <p class="settings-intro">Physics and feel knobs. Source: <code>originalConstants.ts</code>.</p>
         </div>
         <div id="settings-sprites" class="settings-tab-panel hidden" role="tabpanel">
           <p class="settings-intro">Logical keys, source files, and looping animations. Open after sprites finish loading.</p>

@@ -191,7 +191,9 @@ body,
 }
 
 .settings-intro code {
+  font-family: ui-monospace, "Courier New", monospace;
   font-size: 11px;
+  font-weight: 700;
   background: #edf2f7;
   padding: 1px 4px;
   border-radius: 3px;
@@ -277,6 +279,7 @@ body,
   font-size: 10px;
   color: #718096;
   font-family: ui-monospace, "Courier New", monospace;
+  font-weight: 700;
   word-break: break-all;
   margin-top: 2px;
   line-height: 1.3;
@@ -351,6 +354,7 @@ body,
 
 .settings-val {
   font-family: "Courier New", ui-monospace, monospace;
+  font-weight: 700;
   font-size: 12px;
   color: var(--accent);
   min-width: 3em;
@@ -415,9 +419,7 @@ body,
   opacity: 1;
 }
 
-#menu,
-#pause-overlay,
-#gameover-overlay {
+#menu {
   position: fixed;
   inset: 0;
   z-index: 10;
@@ -427,6 +429,30 @@ body,
     radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.35), transparent 40%),
     radial-gradient(circle at 80% 10%, rgba(147, 197, 253, 0.35), transparent 35%),
     linear-gradient(180deg, #dbeafe 0%, #f8fafc 45%, #e2e8f0 100%);
+}
+
+#pause-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: grid;
+  place-items: center;
+}
+
+#gameover-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: grid;
+  place-items: end center;
+  padding-bottom: 10vh;
+  /* Transparent — game (and yeti celebration) stay fully visible */
+  background: transparent;
+  pointer-events: none;
+}
+
+#gameover-overlay .overlay-panel {
+  pointer-events: auto;
 }
 
 .menu-panel,
@@ -553,6 +579,7 @@ kbd {
   background: #edf2f7;
   color: #2d3748;
   font-family: ui-monospace, "Courier New", monospace;
+  font-weight: 700;
   font-size: 11px;
   text-align: center;
 }
@@ -573,6 +600,7 @@ kbd {
 
 #gameover-stats {
   font-family: "Courier New", ui-monospace, monospace;
+  font-weight: 700;
   font-size: 14px;
   margin-bottom: 16px;
   line-height: 1.5;
@@ -597,8 +625,12 @@ kbd {
   display: none !important;
 }
 
-#pause-overlay,
-#gameover-overlay {
+#pause-overlay {
   background: rgba(15, 23, 42, 0.45);
   backdrop-filter: blur(2px);
+}
+
+#gameover-overlay {
+  background: transparent;
+  backdrop-filter: none;
 }

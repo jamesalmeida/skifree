@@ -6,11 +6,14 @@ import {
   JUMP_MS,
   JUMP_SPEED_PX,
   MOUSE_DIR_THRESHOLDS,
+  PIXELS_PER_METRE,
   SNOWBOARD_EDGE_MUL,
   SNOWBOARD_SPEED_MUL,
   SOUTH_SPEED_PX,
   TURN_STEP_MS,
   VELOCITY_PX_S,
+  YETI_SIDE_M,
+  YETI_UPHILL_M,
 } from "./originalConstants";
 
 export interface SteerInput {
@@ -30,9 +33,10 @@ export interface SteerInput {
 let turnCooldown = 0;
 
 const SCOOT_VX = 100;
-const SCOOT_VY_UP = -55; // reverse uphill (negative y)
-const SCOOT_DURATION = 0.16;
-const SCOOT_ANIM = 0.18;
+/** Reverse uphill scoot (negative y). Strong enough to actually leave the start. */
+const SCOOT_VY_UP = -140;
+const SCOOT_DURATION = 0.22;
+const SCOOT_ANIM = 0.22;
 
 function dirIndex(d: Direction): number {
   const i = (DIR_ORDER as readonly string[]).indexOf(d);
@@ -106,7 +110,22 @@ export function createPlayer(character: CharacterType): Player {
   };
 }
 
-export function updatePlayer(player: Player, input: SteerInput, dt: number) {
+export type PlayerUpdateOpts = {
+  /**
+   * Speed scale while on a surface (e.g. soft powder). Applied to ground
+   * target velocity every frame so slowdown actually sticks.
+   */
+  speedMul?: number;
+};
+
+export function updatePlayer(
+  player: Player,
+  input: SteerInput,
+  dt: number,
+  opts: PlayerUpdateOpts = {},
+) {
+  const speedMul = Math.max(0.15, Math.min(1, opts.speedMul ?? 1));
+
   if (player.scootTimer > 0) {
     player.scootTimer -= dt;
     if (player.scootTimer <= 0) {
@@ -277,7 +296,12 @@ export function updatePlayer(player: Player, input: SteerInput, dt: number) {
 
   const target = velocityFor(player.dir, player.character);
   const scrub = board && input.up && !input.down && dirIndex(player.dir) === 3 && !nearlyStopped;
-  const aim = scrub ? { x: target.x * 0.3, y: target.y * 0.35 } : target;
+  const aim0 = scrub ? { x: target.x * 0.3, y: target.y * 0.35 } : target;
+  // Powder / surface drag — only on ground
+  const aim =
+    player.airborne > 0
+      ? aim0
+      : { x: aim0.x * speedMul, y: aim0.y * speedMul };
   const edgeStop =
     player.dir === "hardLeft" ||
     player.dir === "hardRight" ||
@@ -310,20 +334,20 @@ export function updatePlayer(player: Player, input: SteerInput, dt: number) {
   player.x += player.vx * dt;
   player.y += player.vy * dt;
 
-  // Soft floor on y so reverse scoot doesn't go above start forever
-  // (world grows downward only; y can be slightly negative near start)
-  if (player.y < -80) {
-    player.y = -80;
+  // Soft-wall just past yeti triggers so you can actually reach them.
+  const ppm = PIXELS_PER_METRE;
+  const yMin = -(YETI_UPHILL_M + 15) * ppm; // past 69 m uphill
+  const xBound = (YETI_SIDE_M + 20) * ppm; // past 100 m sideways
+  if (player.y < yMin) {
+    player.y = yMin;
     player.vy = Math.max(0, player.vy);
   }
-
-  const bound = 2000;
-  if (player.x < -bound) {
-    player.x = -bound;
+  if (player.x < -xBound) {
+    player.x = -xBound;
     player.vx = Math.abs(player.vx) * 0.2;
   }
-  if (player.x > bound) {
-    player.x = bound;
+  if (player.x > xBound) {
+    player.x = xBound;
     player.vx = -Math.abs(player.vx) * 0.2;
   }
 }

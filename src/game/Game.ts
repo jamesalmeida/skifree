@@ -14,7 +14,12 @@ import {
   launchPlayer,
   type SteerInput,
 } from "./PlayerPhysics";
-import { PIXELS_PER_METRE, YETI_DISTANCE_M } from "./originalConstants";
+import {
+  PIXELS_PER_METRE,
+  YETI_DISTANCE_M,
+  YETI_SIDE_M,
+  YETI_UPHILL_M,
+} from "./originalConstants";
 
 export class Game {
   state: GameState = "menu";
@@ -29,17 +34,26 @@ export class Game {
     vy: number;
     frame: number;
     eating: boolean;
+    celebrating: boolean;
     frameT: number;
   } | null = null;
   timeMs = 0;
   style = 0;
   gatesPassed = 0;
+  gatesMissed = 0;
+  penaltyMs = 0;
   message: string | null = null;
+  /** OG: F turbo (~2×), 1 = normal. Scales whole sim dt. */
+  timeScale = 1;
   private messageTimer = 0;
   private canvas: HTMLCanvasElement;
   input: Input;
   private lastTs = 0;
   private onChange: (() => void) | null = null;
+
+  static readonly TURBO_SCALE = 2;
+  /** OG miss-gate penalty */
+  static readonly GATE_PENALTY_MS = 5000;
 
   constructor(canvas: HTMLCanvasElement, config: GameConfig) {
     this.canvas = canvas;
@@ -61,8 +75,11 @@ export class Game {
     this.timeMs = 0;
     this.style = 0;
     this.gatesPassed = 0;
+    this.gatesMissed = 0;
+    this.penaltyMs = 0;
     this.message = null;
     this.messageTimer = 0;
+    this.timeScale = 1;
     this.state = "playing";
     this.lastTs = performance.now();
     this.notify();
@@ -115,21 +132,46 @@ export class Game {
     if (this.input.wasPressed("c")) {
       this.setCharacter(this.config.character === "skier" ? "snowboarder" : "skier");
     }
+    // OG: F toggles turbo (~2× whole sim) on/off. Bare "f" only (not F2/F3).
+    if (
+      (this.state === "playing" || this.state === "paused") &&
+      this.input.wasPressed("f")
+    ) {
+      this.toggleTurbo();
+    }
+
+    // Eaten: keep sim alive so yeti can finish swallow + celebrate hop loop
+    if (this.state === "eaten") {
+      const rawDt = Math.min(0.05, (now - this.lastTs) / 1000);
+      this.lastTs = now;
+      const dt = Math.min(0.12, rawDt * this.timeScale);
+      this.updateYeti(dt);
+      if (this.messageTimer > 0) {
+        this.messageTimer -= dt;
+        if (this.messageTimer <= 0) this.message = null;
+      }
+      this.input.endFrame();
+      return;
+    }
 
     if (this.state !== "playing") {
       this.input.endFrame();
       return;
     }
 
-    const dt = Math.min(0.05, (now - this.lastTs) / 1000);
+    const rawDt = Math.min(0.05, (now - this.lastTs) / 1000);
     this.lastTs = now;
+    // Scale whole sim (player, yeti, world) — OG F turbo
+    const dt = Math.min(0.12, rawDt * this.timeScale);
     this.timeMs += dt * 1000;
 
     const wasAir = this.player.airborne > 0;
     const flipsBefore = this.player.flipsThisAir;
     const steer = this.readSteer();
     const prevDir = this.player.dir;
-    updatePlayer(this.player, steer, dt);
+    // Must apply before move — physics rewrites vx/vy every frame
+    const speedMul = this.slowSnowSpeedMul();
+    updatePlayer(this.player, steer, dt, { speedMul });
 
     if (prevDir !== this.player.dir && this.player.vy > 40) {
       this.style += this.player.character === "snowboarder" ? 2 : 1;
@@ -245,6 +287,25 @@ export class Game {
     };
   }
 
+  /** Soft powder speed scale (1 = normal). Stacks slightly if overlapping many. */
+  private slowSnowSpeedMul(): number {
+    const p = this.player;
+    if (p.airborne > 0.05 || p.crashTimer > 0) return 1;
+    let inPowder = false;
+    for (const o of this.world.obstacles) {
+      if (o.type !== "slowSnow") continue;
+      const dx = Math.abs(p.x - o.x);
+      const dy = Math.abs(p.y - o.y);
+      // Match visual footprint of the powder sprite
+      if (dx <= o.hw + 6 && dy <= o.hh + 8) {
+        inPowder = true;
+        break;
+      }
+    }
+    // ~40% of normal tuck speed — very noticeable drag
+    return inPowder ? 0.4 : 1;
+  }
+
   private handleCollisions() {
     const p = this.player;
     if (p.crashTimer > 0 || p.invuln > 0) return;
@@ -281,6 +342,19 @@ export class Game {
       const dx = Math.abs(p.x - o.x);
       const dy = Math.abs(p.y - o.y);
       if (dx > o.hw + 8 || dy > o.hh + 10) continue;
+
+      // Soft powder — handled as continuous speedMul in updatePlayer
+      if (o.type === "slowSnow") continue;
+
+      // Lift scenery — non-solid, no interaction
+      if (
+        o.type === "liftPole" ||
+        o.type === "liftEmpty" ||
+        o.type === "liftPerson" ||
+        o.type === "liftPair"
+      ) {
+        continue;
+      }
 
       // Jump ramp
       if (o.type === "jump" && !airborne && p.vy > 40) {
@@ -329,48 +403,112 @@ export class Game {
       }
     }
 
-    // Gates
-    if (airborne) return;
-    const flags = this.world.obstacles.filter(
-      (o) => (o.type === "slalomFlagL" || o.type === "slalomFlagR") && !o.passed,
+    // Slalom / tree-slalom: single markers alternate red← / blue→.
+    // Pass on the arrow side (left of red, right of blue). Miss → +5s.
+    if (this.config.mode === "freestyle") return;
+    this.resolveGates(p.x, p.y);
+  }
+
+  private resolveGates(px: number, py: number) {
+    const gates = this.world.obstacles.filter(
+      (o) =>
+        (o.type === "slalomFlagL" || o.type === "slalomFlagR") && !o.passed,
     );
-    const lefts = flags.filter((f) => f.type === "slalomFlagL");
-    for (const L of lefts) {
-      const R = flags.find((f) => f.type === "slalomFlagR" && Math.abs(f.y - L.y) < 10);
-      if (!R) continue;
-      if (p.y > L.y - 8 && p.y < L.y + 16) {
-        if (p.x > L.x && p.x < R.x) {
-          L.passed = true;
-          R.passed = true;
-          this.gatesPassed++;
-          this.style += 10;
-          this.toast("Gate!");
-        } else if (p.y > L.y + 6) {
-          L.passed = true;
-          R.passed = true;
-          this.style = Math.max(0, this.style - 3);
-        }
+    for (const g of gates) {
+      // Resolve once the skier has crossed the gate line
+      if (py < g.y + 4) continue;
+
+      const isBlue = g.gateColor === "blue" || g.type === "slalomFlagR";
+      // Red ← : pass left of pole · Blue → : pass right of pole
+      const correctSide = isBlue ? px > g.x : px < g.x;
+      const color = isBlue ? "Blue" : "Red";
+      g.passed = true;
+
+      if (correctSide) {
+        this.gatesPassed++;
+        this.style += 10;
+        this.toast(`${color} gate!`);
+      } else {
+        g.gateMissed = true;
+        this.gatesMissed++;
+        this.penaltyMs += Game.GATE_PENALTY_MS;
+        this.timeMs += Game.GATE_PENALTY_MS;
+        this.style = Math.max(0, this.style - 5);
+        this.toast("+5s miss");
       }
     }
   }
 
-  private updateYeti(dt: number) {
-    const distM = this.player.y / PIXELS_PER_METRE;
-    if (distM < YETI_DISTANCE_M) return;
+  /**
+   * OG spawn triggers (any one):
+   *  - ~2000 m downhill
+   *  - ~69 m uphill of the start
+   *  - very far left/right of the mountain
+   */
+  private shouldSpawnYeti(): boolean {
+    const ppm = PIXELS_PER_METRE;
+    const downM = this.player.y / ppm;
+    const upM = -this.player.y / ppm; // positive when above start
+    const sideM = Math.abs(this.player.x) / ppm;
+    return (
+      downM >= YETI_DISTANCE_M ||
+      upM >= YETI_UPHILL_M ||
+      sideM >= YETI_SIDE_M
+    );
+  }
 
-    if (!this.yeti) {
-      this.yeti = {
-        active: true,
-        x: this.player.x + (Math.random() < 0.5 ? -140 : 140),
-        y: this.player.y - 100,
-        vx: 0,
-        vy: 0,
-        frame: 0,
-        eating: false,
-        frameT: 0,
-      };
-      this.toast("The monster approaches...");
+  private spawnYeti() {
+    // Approach from the “outside” direction when possible
+    const sideM = Math.abs(this.player.x) / PIXELS_PER_METRE;
+    let ox = this.player.x + (Math.random() < 0.5 ? -160 : 160);
+    let oy = this.player.y - 120;
+    if (this.player.y < 0) {
+      // uphill: come from further uphill
+      oy = this.player.y - 140;
+    } else if (sideM >= YETI_SIDE_M * 0.85) {
+      ox = this.player.x + (this.player.x >= 0 ? 180 : -180);
+      oy = this.player.y - 40;
     }
+    this.yeti = {
+      active: true,
+      x: ox,
+      y: oy,
+      vx: 0,
+      vy: 0,
+      frame: 0,
+      eating: false,
+      celebrating: false,
+      frameT: 0,
+    };
+    this.toast("The monster approaches...");
+    this.notify();
+  }
+
+  private updateYeti(dt: number) {
+    // After catch: play swallow, then loop joy forever
+    if (this.state === "eaten" && this.yeti) {
+      const y = this.yeti;
+      y.vx = 0;
+      y.vy = 0;
+      y.frameT += dt;
+      const step = y.celebrating ? 0.18 : 0.14;
+      if (y.frameT > step) {
+        y.frameT = 0;
+        y.frame++;
+      }
+      // Eat sequence length (indices 0..8 in YETI_EAT_KEYS)
+      const eatLen = 9;
+      if (y.eating && !y.celebrating && y.frame >= eatLen - 1) {
+        y.celebrating = true;
+        y.frame = 0;
+      }
+      return;
+    }
+
+    if (!this.shouldSpawnYeti()) return;
+
+    if (!this.yeti) this.spawnYeti();
+    if (!this.yeti || this.yeti.eating) return;
 
     const y = this.yeti;
     y.frameT += dt;
@@ -390,6 +528,14 @@ export class Game {
 
     if (dist < 28 && this.player.crashTimer <= 0) {
       y.eating = true;
+      y.celebrating = false;
+      y.frame = 0;
+      y.frameT = 0;
+      y.vx = 0;
+      y.vy = 0;
+      // Snap yeti onto the skier for the eat pose
+      y.x = this.player.x;
+      y.y = this.player.y;
       this.state = "eaten";
       this.toast("Yummy!");
       this.notify();
@@ -399,6 +545,17 @@ export class Game {
   private toast(msg: string) {
     this.message = msg;
     this.messageTimer = 1.0;
+  }
+
+  private toggleTurbo() {
+    if (this.timeScale > 1.01) {
+      this.timeScale = 1;
+      this.toast("Normal speed");
+    } else {
+      this.timeScale = Game.TURBO_SCALE;
+      this.toast("Fast! (F)");
+    }
+    this.notify();
   }
 
   private notify() {
@@ -421,20 +578,25 @@ export class Game {
             vy: this.yeti.vy,
             frame: this.yeti.frame,
             eating: this.yeti.eating,
+            celebrating: this.yeti.celebrating,
           }
         : null,
       cameraY: this.player.y,
       timeMs: this.timeMs,
-      distance: Math.max(0, this.player.y / PIXELS_PER_METRE),
+      // Positive downhill from start; negative when reverse-scooting uphill
+      distance: this.player.y / PIXELS_PER_METRE,
       style: this.style,
       speed: speedPx / PIXELS_PER_METRE,
       mode: this.config.mode,
       graphics: this.config.graphics,
       gatesPassed: this.gatesPassed,
+      gatesMissed: this.gatesMissed,
       gatesTotal: this.world.gatesTotal,
+      penaltyMs: this.penaltyMs,
       message: this.message,
       mouseX: this.input.mouseInCanvas ? this.input.mouseX : null,
       mouseY: this.input.mouseInCanvas ? this.input.mouseY : null,
+      timeScale: this.timeScale,
     };
   }
 }

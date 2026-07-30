@@ -28,7 +28,6 @@ export type SpriteKey =
   | "rock"
   | "stump"
   | "jump"
-  | "mushroom"
   | "flagL"
   | "flagR"
   | "finish"
@@ -49,7 +48,6 @@ const Gd = "#14532d";
 const Br = "#78350f"; // brown trunk
 const Gy = "#64748b"; // rock
 const Rd = "#dc2626"; // flag
-const Yw = "#facc15";
 const Bd = "#0f766e"; // snowboard teal
 const Bd2 = "#134e4a";
 const Yet = "#e2e8f0";
@@ -198,10 +196,12 @@ const rock: P[][] = [
   [T, Gy, Gy, Gy, Gy, Gy, T],
 ];
 
+// Olive stump/shrub (classic #46 look)
 const stump: P[][] = [
-  [T, Br, Br, Br, T],
-  [Br, Yw, Br, Yw, Br],
-  [T, Br, Br, Br, T],
+  [T, "#8a8a38", "#b8b850", "#8a8a38", T],
+  ["#5a5a20", "#b8b850", "#d4d46a", "#b8b850", "#5a5a20"],
+  ["#5a5a20", "#8a8a38", "#b8b850", "#8a8a38", "#5a5a20"],
+  [T, "#5a5a20", "#6e6e28", "#5a5a20", T],
 ];
 
 const jump: P[][] = [
@@ -209,14 +209,6 @@ const jump: P[][] = [
   [T, T, T, Gy, Gy, Gy, Gy, T, T, T],
   [T, Gy, Gy, Gy, Gy, Gy, Gy, Gy, Gy, T],
   [Gy, Gy, Gy, Gy, Gy, Gy, Gy, Gy, Gy, Gy],
-];
-
-const mushroom: P[][] = [
-  [T, Rd, Rd, Rd, T],
-  [Rd, W, Rd, W, Rd],
-  [Rd, Rd, Rd, Rd, Rd],
-  [T, T, W, T, T],
-  [T, T, W, T, T],
 ];
 
 const flagL: P[][] = [
@@ -315,8 +307,6 @@ export function getSprite(key: SpriteKey): HTMLCanvasElement {
       return get(key, stump);
     case "jump":
       return get(key, jump);
-    case "mushroom":
-      return get(key, mushroom);
     case "flagL":
       return get(key, flagL);
     case "flagR":
@@ -367,8 +357,6 @@ export function obstacleSpriteKey(type: string): SpriteKey {
       return "stump";
     case "jump":
       return "jump";
-    case "mushroom":
-      return "mushroom";
     case "slalomFlagL":
       return "flagL";
     case "slalomFlagR":

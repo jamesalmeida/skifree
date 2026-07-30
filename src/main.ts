@@ -33,7 +33,7 @@ const gameoverStats = document.getElementById("gameover-stats")!;
 
 const CONTROLS_KEY = "skifree-controls";
 
-let mode: GameMode = "slalom";
+let mode: GameMode = "freestyle";
 let character: CharacterType = "skier";
 let graphics: GraphicsMode = "classic";
 let controls: ControlScheme =
@@ -88,12 +88,12 @@ function applyControlsUi(scheme: ControlScheme) {
       "Pointer steers; click or Space to jump; ↑ in air for backflips.";
     controlsHelp.innerHTML = `
       <p>Mouse · steer · click / <kbd>Space</kbd> jump · <kbd>↑</kbd> air flip</p>
-      <p><kbd>F2</kbd> restart · <kbd>F3</kbd> / <kbd>P</kbd> pause · <kbd>G</kbd> graphics · <kbd>C</kbd> character</p>`;
+      <p><kbd>F</kbd> turbo · <kbd>F2</kbd> restart · <kbd>F3</kbd> / <kbd>P</kbd> pause · <kbd>G</kbd> gfx · <kbd>C</kbd> char</p>`;
   } else {
     controlsHint.textContent = "Arrow keys / WASD / numpad · Space to jump.";
     controlsHelp.innerHTML = `
-      <p><kbd>←</kbd><kbd>→</kbd> steer · <kbd>↑</kbd> brake / flip · <kbd>↓</kbd> tuck · <kbd>Space</kbd> jump</p>
-      <p><kbd>F2</kbd> restart · <kbd>F3</kbd> / <kbd>P</kbd> pause · <kbd>G</kbd> graphics · <kbd>C</kbd> character</p>`;
+      <p><kbd>←</kbd><kbd>→</kbd> / <kbd>A</kbd><kbd>D</kbd> steer · <kbd>↑</kbd> brake / flip · <kbd>↓</kbd> / <kbd>S</kbd> tuck · <kbd>Space</kbd> jump</p>
+      <p><kbd>F</kbd> turbo · <kbd>F2</kbd> restart · <kbd>F3</kbd> / <kbd>P</kbd> pause · <kbd>G</kbd> gfx · <kbd>C</kbd> char</p>`;
   }
 }
 
@@ -144,17 +144,19 @@ function applyGraphics(g: GraphicsMode) {
 function syncUi() {
   const snap = game.snapshot();
   const playing = snap.state === "playing" || snap.state === "paused";
+  const eatenOrFinished = snap.state === "eaten" || snap.state === "finished";
 
   menu.classList.toggle("hidden", snap.state !== "menu");
-  hud.classList.toggle("hidden", !playing);
+  // Keep HUD visible while yeti celebrates (eaten)
+  hud.classList.toggle("hidden", !playing && snap.state !== "eaten");
   pauseOverlay.classList.toggle("hidden", snap.state !== "paused");
 
-  const showOver = snap.state === "eaten" || snap.state === "finished";
+  const showOver = eatenOrFinished;
   gameoverOverlay.classList.toggle("hidden", !showOver);
 
   if (playing || showOver) {
     statTime.textContent = formatTime(snap.timeMs);
-    statDist.textContent = String(Math.floor(snap.distance));
+    statDist.textContent = String(Math.trunc(snap.distance));
     statSpeed.textContent = snap.speed.toFixed(0);
     statStyle.textContent = String(snap.style);
   }
@@ -169,11 +171,13 @@ function syncUi() {
   if (snap.state === "eaten") {
     gameoverTitle.textContent = "Yummy!";
     gameoverMsg.textContent = "The Abominable Snow Monster got you.";
-    gameoverStats.innerHTML = `Distance: ${Math.floor(snap.distance)}m<br>Style: ${snap.style}<br>Time: ${formatTime(snap.timeMs)}`;
+    gameoverStats.innerHTML = `Distance: ${Math.trunc(snap.distance)}m<br>Style: ${snap.style}<br>Time: ${formatTime(snap.timeMs)}`;
   } else if (snap.state === "finished") {
     gameoverTitle.textContent = "Finish!";
     gameoverMsg.textContent = "You cleared the course.";
-    gameoverStats.innerHTML = `Time: ${formatTime(snap.timeMs)}<br>Style: ${snap.style}<br>Gates: ${snap.gatesPassed}/${snap.gatesTotal}`;
+    gameoverStats.innerHTML = `Time: ${formatTime(snap.timeMs)}<br>Style: ${snap.style}<br>Gates: ${snap.gatesPassed}/${snap.gatesTotal}${
+      snap.gatesMissed ? `<br>Missed: ${snap.gatesMissed} (+${(snap.penaltyMs / 1000).toFixed(0)}s)` : ""
+    }`;
   }
 
   if (snap.graphics !== graphics) {
@@ -231,12 +235,14 @@ async function boot() {
     game.tick(now);
     const snap = game.snapshot();
 
-    if (snap.state === "playing" || snap.state === "paused") {
+    if (snap.state === "playing" || snap.state === "paused" || snap.state === "eaten") {
       statTime.textContent = formatTime(snap.timeMs);
-      statDist.textContent = String(Math.floor(snap.distance));
+      statDist.textContent = String(Math.trunc(snap.distance));
       statSpeed.textContent = snap.speed.toFixed(0);
       statStyle.textContent = String(snap.style);
-      statDir.textContent = `${snap.player.dir}  vx=${snap.player.vx.toFixed(0)} vy=${snap.player.vy.toFixed(0)}`;
+      if (snap.state !== "eaten") {
+        statDir.textContent = `${snap.player.dir}  vx=${snap.player.vx.toFixed(0)} vy=${snap.player.vy.toFixed(0)}`;
+      }
       if (snap.message) {
         toastEl.textContent = snap.message;
         toastEl.classList.add("show");

@@ -42,8 +42,12 @@ Resource align shift: **4** (offsets/lengths are in 16-byte paragraphs).
 | 12–18 | Crash / ouch / tumble |
 | 23–26 | Slalom flags / markers |
 | 28–30 | **Snowboarders** (NPC + playable art) |
-| 31–32 | Dogs |
-| 33–36 | Rocks / stumps |
+| 31–32 | Pink beginners (extract mislabeled “dog”) |
+| 33–34 | Gray dogs walk (extract mislabeled “rock”) |
+| 35–36 | Dogs sit/woof (extract mislabeled “stump”) |
+| 37–44 | Freestyle snowboarder air/crash poses |
+| 45 | Rock / snow bump |
+| 46 | Olive stump/shrub |
 | 49–51 | Trees (med / dead / tall) |
 | 52, 82 | Jump ramps (rainbow + small) |
 | 53–63 | Logo, UI signs, course signs |
@@ -101,6 +105,10 @@ Bitmap load-order word list @ data+`0x00CA` includes skier frames then snowboard
 | Trees 49–51, rocks 33–34, ramp 52 | World obstacles |
 | Yeti 68–81 | Yeti entity + eat frames |
 | F2 restart / F3 pause | Same hotkeys |
+| F turbo | Toggle sim time scale (~2×) on/off |
+| Slalom / tree slalom | Alternating red← / blue→ markers; miss = +5s |
+| Yeti spawn | ~2000 m down, ~69 m uphill of start, or ~100 m far left/right |
+| Yeti catch | Eat anim then celebrate hop loop; game-over UI does not freeze the world |
 | Classic 2D | Canvas + extracted PNGs |
 | Optional 3D | three.js path (stylized) |
 

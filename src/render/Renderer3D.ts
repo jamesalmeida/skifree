@@ -217,15 +217,24 @@ export class Renderer3D {
       trunk.position.y = 0.7;
       trunk.castShadow = true;
       g.add(trunk);
-    } else if (o.type === "rock" || o.type === "stump") {
+    } else if (o.type === "rock") {
       const m = new THREE.Mesh(
-        new THREE.DodecahedronGeometry(o.type === "rock" ? 0.45 : 0.3),
+        new THREE.DodecahedronGeometry(0.45),
         new THREE.MeshStandardMaterial({
-          color: o.type === "rock" ? 0x64748b : 0x78350f,
+          color: 0x64748b,
           roughness: 1,
         }),
       );
       m.position.y = 0.25;
+      m.castShadow = true;
+      g.add(m);
+    } else if (o.type === "stump") {
+      // Olive shrub/stump (classic #46)
+      const m = new THREE.Mesh(
+        new THREE.ConeGeometry(0.4, 0.55, 6),
+        new THREE.MeshStandardMaterial({ color: 0xa3a34a, roughness: 1 }),
+      );
+      m.position.y = 0.22;
       m.castShadow = true;
       g.add(m);
     } else if (o.type === "jump") {
@@ -237,18 +246,64 @@ export class Renderer3D {
       m.rotation.x = -0.25;
       m.castShadow = true;
       g.add(m);
-    } else if (o.type === "mushroom") {
-      const stem = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.08, 0.1, 0.35, 6),
-        new THREE.MeshStandardMaterial({ color: 0xf8fafc }),
+    } else if (o.type === "slowSnow") {
+      const m = new THREE.Mesh(
+        new THREE.SphereGeometry(0.9, 10, 8, 0, Math.PI * 2, 0, Math.PI / 2),
+        new THREE.MeshStandardMaterial({
+          color: 0xe2e8f0,
+          roughness: 1,
+          transparent: true,
+          opacity: 0.85,
+        }),
       );
-      stem.position.y = 0.18;
-      const cap = new THREE.Mesh(
-        new THREE.SphereGeometry(0.28, 10, 8, 0, Math.PI * 2, 0, Math.PI / 2),
+      m.scale.set(1.8, 0.35, 1.1);
+      m.position.y = 0.05;
+      g.add(m);
+    } else if (o.type === "liftPole") {
+      const pole = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.08, 0.1, 3.2, 6),
+        new THREE.MeshStandardMaterial({ color: 0x1a1a1a }),
+      );
+      pole.position.y = 1.6;
+      const base = new THREE.Mesh(
+        new THREE.BoxGeometry(0.5, 0.7, 0.35),
+        new THREE.MeshStandardMaterial({ color: 0xfacc15 }),
+      );
+      base.position.y = 0.35;
+      g.add(pole, base);
+    } else if (
+      o.type === "liftEmpty" ||
+      o.type === "liftPerson" ||
+      o.type === "liftPair"
+    ) {
+      const seat = new THREE.Mesh(
+        new THREE.BoxGeometry(1.1, 0.45, 0.55),
         new THREE.MeshStandardMaterial({ color: 0xdc2626 }),
       );
-      cap.position.y = 0.35;
-      g.add(stem, cap);
+      seat.position.y = 1.4;
+      const bar = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.03, 0.03, 0.9, 5),
+        new THREE.MeshStandardMaterial({ color: 0x1a1a1a }),
+      );
+      bar.position.y = 1.95;
+      g.add(seat, bar);
+      if (o.type === "liftPerson") {
+        const body = new THREE.Mesh(
+          new THREE.CapsuleGeometry(0.12, 0.25, 3, 6),
+          new THREE.MeshStandardMaterial({ color: 0x2563eb }),
+        );
+        body.position.set(0, 1.75, 0);
+        g.add(body);
+      } else if (o.type === "liftPair") {
+        for (const ox of [-0.22, 0.22]) {
+          const body = new THREE.Mesh(
+            new THREE.CapsuleGeometry(0.12, 0.25, 3, 6),
+            new THREE.MeshStandardMaterial({ color: ox < 0 ? 0x2563eb : 0xdc2626 }),
+          );
+          body.position.set(ox, 1.75, 0);
+          g.add(body);
+        }
+      }
     } else if (o.type === "slalomFlagL" || o.type === "slalomFlagR") {
       const pole = new THREE.Mesh(
         new THREE.CylinderGeometry(0.04, 0.04, 1.2, 6),
@@ -378,8 +433,16 @@ export class Renderer3D {
     }
     // World is already in original pixels; scale down for 3D scene
     this.yetiMesh.position.set(snap.yeti.x * 0.08, 0, snap.yeti.y * 0.08);
-    if (snap.yeti.eating) {
+    if (snap.yeti.celebrating) {
+      const hop = Math.abs(Math.sin(snap.yeti.frame * 0.9)) * 0.35;
+      this.yetiMesh.position.y = hop;
+      this.yetiMesh.scale.setScalar(1.1);
+    } else if (snap.yeti.eating) {
       this.yetiMesh.scale.setScalar(1.15);
+      this.yetiMesh.position.y = 0;
+    } else {
+      this.yetiMesh.scale.setScalar(1);
+      this.yetiMesh.position.y = 0;
     }
   }
 

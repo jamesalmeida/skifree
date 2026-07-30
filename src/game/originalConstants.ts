@@ -42,6 +42,11 @@ export type TunableSettings = {
   mouseDeadZone: number;
   mouseHardZone: number;
   showDirDebug: boolean;
+  /**
+   * Extra particle snow spray etc. Classic two-frame south snow-dots always run.
+   * Off by default — pure OG look.
+   */
+  enhancedAnimations: boolean;
 };
 
 /** Factory defaults — classic SkiFree-ish speed readouts */
@@ -61,6 +66,7 @@ export const DEFAULT_SETTINGS: TunableSettings = {
   mouseDeadZone: 16,
   mouseHardZone: 96,
   showDirDebug: true,
+  enhancedAnimations: false,
 };
 
 /** Bump when defaults change incompatibly so old localStorage doesn’t stick. */
@@ -90,6 +96,13 @@ export const settings: TunableSettings = {
 
 export let PIXELS_PER_METRE = settings.pixelsPerMetre;
 export let YETI_DISTANCE_M = settings.yetiDistanceM;
+/** Yeti if you reverse past the start uphill (~69 m above the lodge) */
+export const YETI_UPHILL_M = 69;
+/**
+ * Yeti if you ski far left/right of the mountain (~100 m).
+ * Keep this near WORLD_HALF / ppm so you still see trees before blank snow.
+ */
+export const YETI_SIDE_M = 100;
 export let EDGE_FRICTION = settings.edgeFriction;
 export let SNOWBOARD_SPEED_MUL = settings.snowboardSpeedMul;
 export let SNOWBOARD_EDGE_MUL = settings.snowboardEdgeMul;
@@ -99,6 +112,7 @@ export let JUMP_MS = settings.jumpMs;
 export let TURN_STEP_MS = settings.turnStepMs;
 export let CLASSIC_SCALE = settings.classicScale;
 export let SHOW_DIR_DEBUG = settings.showDirDebug;
+export let ENHANCED_ANIMATIONS = settings.enhancedAnimations;
 /** Ground tuck speed (px/s) */
 export let SOUTH_SPEED_PX = settings.southSpeedMs * settings.pixelsPerMetre;
 /** Jump tuck speed (px/s) */
@@ -177,6 +191,7 @@ export function applySettings(partial?: Partial<TunableSettings>) {
   TURN_STEP_MS = settings.turnStepMs;
   CLASSIC_SCALE = settings.classicScale;
   SHOW_DIR_DEBUG = settings.showDirDebug;
+  ENHANCED_ANIMATIONS = !!settings.enhancedAnimations;
   MOUSE_DIR_THRESHOLDS = [
     settings.mouseHardZone,
     settings.mouseHardZone * 0.5,

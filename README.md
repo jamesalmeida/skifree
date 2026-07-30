@@ -27,6 +27,7 @@ Then open the URL Vite prints (usually http://localhost:5173).
 | Mouse / ← → / A D | Steer |
 | ↑ ↓ / W S | Brake / tuck |
 | Numpad | Classic SkiFree-style directions |
+| F | Turbo (2× sim speed, OG cheat) — toggle on/off |
 | F2 / R | Restart |
 | F3 / P / Esc | Pause |
 | G | Toggle classic ↔ 3D graphics |

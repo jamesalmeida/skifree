@@ -1,10 +1,15 @@
 import type { GameSnapshot } from "../game/types";
-import { CLASSIC_SCALE, SOUTH_SPEED_PX } from "../game/originalConstants";
+import {
+  CLASSIC_SCALE,
+  SOUTH_SPEED_PX,
+  ENHANCED_ANIMATIONS,
+} from "../game/originalConstants";
 import {
   getOriginalSprite,
   playerSpriteName,
   obstacleSpriteName,
   yetiSpriteName,
+  beginnerSpriteName,
 } from "./originalSprites";
 
 const SNOW = "#ffffff";
@@ -68,8 +73,12 @@ export class ClassicRenderer {
     }
   }
 
-  /** Snow kicking up behind player when tucking downhill at speed */
+  /** Particle snow spray — only when Enhanced animations is on */
   private updateSnowSpray(snap: GameSnapshot, dt: number) {
+    if (!ENHANCED_ANIMATIONS) {
+      this.spray = [];
+      return;
+    }
     const p = snap.player;
     const speed = Math.hypot(p.vx, p.vy);
     const goingDown =
@@ -160,11 +169,19 @@ export class ClassicRenderer {
     for (const o of snap.obstacles) {
       const { sx, sy } = toScreen(o.x, o.y);
       if (sy < -80 || sy > h + 80 || sx < -80 || sx > w + 80) continue;
-      const key = obstacleSpriteName(o.type);
+      const key = obstacleSpriteName(o.type, o);
       list.push({
         y: o.y,
         draw: () => {
-          this.drawSprite(key, sx, sy);
+          // Dim missed gates slightly
+          if (o.gateMissed) {
+            ctx.save();
+            ctx.globalAlpha = 0.45;
+            this.drawSprite(key, sx, sy);
+            ctx.restore();
+          } else {
+            this.drawSprite(key, sx, sy);
+          }
           if (o.onFire) {
             const fi = o.fireFrame ?? 0;
             this.drawSprite(`fire${fi % 3}`, sx, sy - 8);
@@ -178,7 +195,14 @@ export class ClassicRenderer {
       if (sy < -80 || sy > h + 80) continue;
 
       if (n.kind === "dog") {
-        const dogKey = (n.dogFrame ?? 0) < 1 ? "dog" : "dog2";
+        const sitting = n.dogState === "woof" || n.dogState === "pee";
+        const dogKey = sitting
+          ? (n.dogFrame ?? 0) < 1
+            ? "dogSit"
+            : "dogSit2"
+          : (n.dogFrame ?? 0) < 1
+            ? "dog"
+            : "dog2";
         const flip = n.vx < 0;
         list.push({
           y: n.y,
@@ -208,7 +232,8 @@ export class ClassicRenderer {
       }
 
       if (n.kind === "beginner") {
-        const begKey = Math.floor((n.y / 20) % 2) === 0 ? "beginner" : "beginner2";
+        const phase: 0 | 1 = Math.floor(n.y / 20) % 2 === 0 ? 0 : 1;
+        const begKey = beginnerSpriteName(n.dir, phase);
         list.push({
           y: n.y,
           draw: () => this.drawSprite(begKey, sx, sy),
@@ -232,21 +257,47 @@ export class ClassicRenderer {
 
     if (snap.yeti?.active) {
       const { sx, sy } = toScreen(snap.yeti.x, snap.yeti.y);
-      const key = yetiSpriteName(snap.yeti.frame, snap.yeti.eating);
+      const key = yetiSpriteName(
+        snap.yeti.frame,
+        snap.yeti.eating,
+        snap.yeti.celebrating,
+      );
+      // Run cycle faces one way; mirror when chasing left
+      const flipX =
+        !snap.yeti.eating &&
+        !snap.yeti.celebrating &&
+        snap.yeti.vx < 0;
+      // Joy hop bounce while celebrating
+      const hop =
+        snap.yeti.celebrating
+          ? -10 * Math.abs(Math.sin(snap.yeti.frame * 0.9))
+          : 0;
       list.push({
         y: snap.yeti.y,
-        draw: () => this.drawSprite(key, sx, sy),
+        draw: () => this.drawSprite(key, sx, sy + hop, { flipX }),
       });
     }
 
+    // Hide player once the yeti has started eating them
+    const hidePlayer = !!(snap.yeti?.eating || snap.yeti?.celebrating);
+
     {
       const p = snap.player;
+      if (hidePlayer) {
+        /* swallowed */
+      } else {
       const { sx, sy } = toScreen(p.x, p.y);
+      // Classic tuck: alternate snow-dot frames by distance traveled
+      const southFrame: 0 | 1 =
+        p.dir === "down" && p.crashPhase === "none" && p.airborne <= 0
+          ? ((Math.floor(p.y / 8) & 1) as 0 | 1)
+          : 0;
       const key = playerSpriteName(p.character, p.dir, {
         crashPhase: p.crashPhase,
         airborne: p.airborne > 0,
         flipPose: p.flipPose,
         scootKind: p.scootTimer > 0 ? p.scootKind : "none",
+        southFrame,
       });
       let bounce = 0;
       if (p.airborne > 0) {
@@ -257,8 +308,8 @@ export class ClassicRenderer {
       list.push({
         y: p.y + 0.5,
         draw: () => {
-          // Snow spray behind feet (drawn first so it sits “under” the skier)
-          this.drawSnowSpray(sx, sy);
+          // Particle spray only with Enhanced animations
+          if (ENHANCED_ANIMATIONS) this.drawSnowSpray(sx, sy);
           ctx.fillStyle = "rgba(0,0,0,0.08)";
           ctx.beginPath();
           ctx.ellipse(sx, sy + 2, 12, 4, 0, 0, Math.PI * 2);
@@ -266,6 +317,7 @@ export class ClassicRenderer {
           this.drawSprite(key, sx, sy + bounce);
         },
       });
+      } // end !hidePlayer
     }
 
     list.sort((a, b) => a.y - b.y);
