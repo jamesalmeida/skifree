@@ -163,14 +163,19 @@ export class ClassicRenderer {
       sy: originY + (y - camY) * CLASSIC_SCALE,
     });
 
-    type Item = { y: number; draw: () => void };
+    // layer 0 = ground features (player always skis on top)
+    // layer 1 = world entities (y-sorted: further down the slope draws later)
+    type Item = { layer: number; y: number; draw: () => void };
     const list: Item[] = [];
 
     for (const o of snap.obstacles) {
       const { sx, sy } = toScreen(o.x, o.y);
       if (sy < -80 || sy > h + 80 || sx < -80 || sx > w + 80) continue;
       const key = obstacleSpriteName(o.type, o);
+      // Soft powder mounds are flat ground art — never occlude the skier
+      const layer = o.type === "slowSnow" ? 0 : 1;
       list.push({
+        layer,
         y: o.y,
         draw: () => {
           // Dim missed gates slightly
@@ -205,6 +210,7 @@ export class ClassicRenderer {
             : "dog2";
         const flip = n.vx < 0;
         list.push({
+          layer: 1,
           y: n.y,
           draw: () => {
             this.drawSprite(dogKey, sx, sy, { flipX: flip });
@@ -235,6 +241,7 @@ export class ClassicRenderer {
         const phase: 0 | 1 = Math.floor(n.y / 20) % 2 === 0 ? 0 : 1;
         const begKey = beginnerSpriteName(n.dir, phase);
         list.push({
+          layer: 1,
           y: n.y,
           draw: () => this.drawSprite(begKey, sx, sy),
         });
@@ -250,6 +257,7 @@ export class ClassicRenderer {
               : "board_down"
           : "npc_skier";
       list.push({
+        layer: 1,
         y: n.y,
         draw: () => this.drawSprite(key, sx, sy),
       });
@@ -273,6 +281,7 @@ export class ClassicRenderer {
           ? -10 * Math.abs(Math.sin(snap.yeti.frame * 0.9))
           : 0;
       list.push({
+        layer: 1,
         y: snap.yeti.y,
         draw: () => this.drawSprite(key, sx, sy + hop, { flipX }),
       });
@@ -306,6 +315,7 @@ export class ClassicRenderer {
         bounce = -5 * Math.sin((p.scootTimer / 0.18) * Math.PI);
       }
       list.push({
+        layer: 1,
         y: p.y + 0.5,
         draw: () => {
           // Particle spray only with Enhanced animations
@@ -320,7 +330,7 @@ export class ClassicRenderer {
       } // end !hidePlayer
     }
 
-    list.sort((a, b) => a.y - b.y);
+    list.sort((a, b) => a.layer - b.layer || a.y - b.y);
     for (const item of list) item.draw();
 
     if (snap.mouseX !== null && snap.mouseY !== null) {
