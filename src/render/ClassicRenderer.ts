@@ -153,7 +153,7 @@ export class ClassicRenderer {
     this.sprayTime += dt;
     this.updateSnowSpray(snap, dt);
 
-    const camX = snap.player.x;
+    const camX = snap.cameraX;
     const camY = snap.cameraY;
     const originX = w / 2;
     const originY = h * 0.4;
@@ -287,13 +287,14 @@ export class ClassicRenderer {
       });
     }
 
-    // Hide player once the yeti has started eating them
-    const hidePlayer = !!(snap.yeti?.eating || snap.yeti?.celebrating);
+    // Hide player once the yeti has started eating them, or during menu attract
+    const hidePlayer =
+      snap.hidePlayer || !!(snap.yeti?.eating || snap.yeti?.celebrating);
 
     {
       const p = snap.player;
       if (hidePlayer) {
-        /* swallowed */
+        /* swallowed / attract mode */
       } else {
       const { sx, sy } = toScreen(p.x, p.y);
       // Classic tuck: alternate snow-dot frames by distance traveled

@@ -136,7 +136,10 @@ export interface GameSnapshot {
     /** After swallow — loops joy hop forever */
     celebrating: boolean;
   } | null;
+  cameraX: number;
   cameraY: number;
+  /** Attract-mode / yeti eat — don't draw the player avatar */
+  hidePlayer: boolean;
   timeMs: number;
   distance: number;
   style: number;

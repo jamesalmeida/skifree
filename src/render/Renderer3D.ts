@@ -142,25 +142,30 @@ export class Renderer3D {
     }
 
     const p = snap.player;
-    // Map game coords: x -> x, y (downhill) -> z
-    this.playerRoot.position.set(p.x * 0.08, p.airborne > 0 ? 1.2 : 0, p.y * 0.08);
-    const yaw = this.dirToYaw(p.dir);
-    this.playerRoot.rotation.y = yaw;
-    if (p.crashTimer > 0) {
-      this.playerRoot.rotation.z = Math.sin(this.clock * 20) * 0.5;
-      this.playerRoot.rotation.x = 0.6;
-    } else {
-      this.playerRoot.rotation.z = 0;
-      this.playerRoot.rotation.x = p.airborne > 0 ? -0.25 : 0.05;
+    const camX = snap.cameraX;
+    const camY = snap.cameraY;
+    this.playerRoot.visible = !snap.hidePlayer;
+    if (!snap.hidePlayer) {
+      // Map game coords: x -> x, y (downhill) -> z
+      this.playerRoot.position.set(p.x * 0.08, p.airborne > 0 ? 1.2 : 0, p.y * 0.08);
+      const yaw = this.dirToYaw(p.dir);
+      this.playerRoot.rotation.y = yaw;
+      if (p.crashTimer > 0) {
+        this.playerRoot.rotation.z = Math.sin(this.clock * 20) * 0.5;
+        this.playerRoot.rotation.x = 0.6;
+      } else {
+        this.playerRoot.rotation.z = 0;
+        this.playerRoot.rotation.x = p.airborne > 0 ? -0.25 : 0.05;
+      }
     }
 
     // Camera follows behind/above looking down-slope
-    const camTarget = new THREE.Vector3(p.x * 0.08, 0.5, p.y * 0.08 + 6);
-    const camPos = new THREE.Vector3(p.x * 0.08, 22, p.y * 0.08 - 18);
+    const camTarget = new THREE.Vector3(camX * 0.08, 0.5, camY * 0.08 + 6);
+    const camPos = new THREE.Vector3(camX * 0.08, 22, camY * 0.08 - 18);
     this.camera.position.lerp(camPos, 0.15);
     this.camera.lookAt(camTarget);
 
-    this.snow.position.set(p.x * 0.08, 0, p.y * 0.08 + 20);
+    this.snow.position.set(camX * 0.08, 0, camY * 0.08 + 20);
 
     this.syncObstacles(snap.obstacles);
     this.syncNpcs(snap.npcs);
