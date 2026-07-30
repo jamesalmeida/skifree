@@ -190,8 +190,9 @@ export class Game {
       this.style += 10 * flipsBefore;
     }
 
-    this.world.ensureGenerated(this.player.y);
     this.world.updateNpcs(dt, this.player.y);
+    this.world.updateLifts(dt, this.player.y);
+    this.world.ensureGenerated(this.player.y);
     this.world.updateFires(dt);
     this.handleCollisions();
     this.updateYeti(dt);

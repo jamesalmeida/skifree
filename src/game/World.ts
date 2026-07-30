@@ -37,6 +37,16 @@ function sizeFor(type: ObstacleType): { hw: number; hh: number; solid: boolean }
 
 /** Fixed x of the scenic ski lift corridor (world space). */
 export const LIFT_X = -520;
+/** Chairs hang on the cable to the right of each pole. */
+const LIFT_CHAIR_X = LIFT_X + 18;
+/** Slow climb up the mountain (world +y is downhill). */
+const LIFT_SPEED = 32;
+/** Even spacing along the cable. */
+const LIFT_CHAIR_SPACING = 130;
+
+function isLiftChair(type: ObstacleType): boolean {
+  return type === "liftEmpty" || type === "liftPerson" || type === "liftPair";
+}
 
 function make(
   type: ObstacleType,
@@ -116,15 +126,22 @@ export class World {
       this.obstacles.push(make("tree", -200 + this.rng.range(-40, 40), y));
       this.obstacles.push(make("tree", 200 + this.rng.range(-40, 40), y));
     }
-    // Ski lift starts near the lodge area
+    // Ski lift starts near the lodge area — poles fixed, chairs climb the cable
     for (let y = 80; y < 500; y += 140) {
       this.obstacles.push(make("liftPole", LIFT_X, y));
     }
-    this.obstacles.push(make("liftEmpty", LIFT_X + 2, 160));
-    this.obstacles.push(make("liftPerson", LIFT_X + 2, 300));
-    this.obstacles.push(make("liftPair", LIFT_X + 2, 420));
+    for (let y = 100; y < 520; y += LIFT_CHAIR_SPACING) {
+      this.obstacles.push(make(this.randomLiftChair(), LIFT_CHAIR_X, y));
+    }
     this.generatedTo = 500;
     this.generatedUpTo = -400;
+  }
+
+  private randomLiftChair(): ObstacleType {
+    const r = this.rng.next();
+    if (r < 0.35) return "liftEmpty";
+    if (r < 0.7) return "liftPerson";
+    return "liftPair";
   }
 
   /**
@@ -209,6 +226,8 @@ export class World {
     const maxY = playerY + 1800;
     this.obstacles = this.obstacles.filter(
       (o) =>
+        // Lift chairs wrap in updateLifts; keep them slightly past prune bounds
+        (isLiftChair(o.type) && o.y > minY - 100 && o.y < maxY + 100) ||
         (o.y > minY && o.y < maxY) ||
         ((o.type === "slalomFlagL" || o.type === "slalomFlagR" || o.type === "finish") &&
           !o.passed),
@@ -277,14 +296,10 @@ export class World {
       }
     }
 
-    // Ski lift corridor continues down the mountain
+    // Ski lift poles continue down the mountain (chairs are animated separately)
     const poleY = Math.floor(y0 / 140) * 140 + 70;
     if (poleY >= y0 && poleY < y1) {
       this.obstacles.push(make("liftPole", LIFT_X, poleY));
-      const chairRoll = this.rng.next();
-      const chairType: ObstacleType =
-        chairRoll < 0.35 ? "liftEmpty" : chairRoll < 0.7 ? "liftPerson" : "liftPair";
-      this.obstacles.push(make(chairType, LIFT_X + 2, poleY + this.rng.range(20, 90)));
     }
 
     // Sparse NPCs — chunks are ~220m; keep the slope readable
@@ -415,6 +430,48 @@ export class World {
       // Burn out after a while but stay as dead tree charcoal
       if ((o.fireT ?? 0) > 4) {
         o.onFire = false;
+      }
+    }
+  }
+
+  /**
+   * Ski lift chairs crawl slowly uphill on the right side of the poles.
+   * Far-uphill chairs recycle ahead of the player so the cable stays populated.
+   */
+  updateLifts(dt: number, playerY: number) {
+    const wrapBelow = playerY - 800;
+    const span = 1800;
+    const want = Math.floor(span / LIFT_CHAIR_SPACING);
+
+    for (const o of this.obstacles) {
+      if (!isLiftChair(o.type)) continue;
+      o.x = LIFT_CHAIR_X;
+      o.y -= LIFT_SPEED * dt;
+      if (o.y < wrapBelow) {
+        o.y += span;
+        // Fresh occupancy when it reappears downhill
+        const next = this.randomLiftChair();
+        if (next !== o.type) {
+          o.type = next;
+          const s = sizeFor(next);
+          o.hw = s.hw;
+          o.hh = s.hh;
+          o.solid = s.solid;
+        }
+      }
+    }
+
+    // Generation only places poles — top up chairs if prune thinned the cable
+    const chairs = this.obstacles.filter((o) => isLiftChair(o.type));
+    if (chairs.length < want) {
+      const occupied = new Set(chairs.map((c) => Math.round(c.y / LIFT_CHAIR_SPACING)));
+      for (let i = 0; i < want; i++) {
+        const y = wrapBelow + 40 + i * LIFT_CHAIR_SPACING;
+        const slot = Math.round(y / LIFT_CHAIR_SPACING);
+        if (occupied.has(slot)) continue;
+        this.obstacles.push(make(this.randomLiftChair(), LIFT_CHAIR_X, y));
+        occupied.add(slot);
+        if (this.obstacles.filter((o) => isLiftChair(o.type)).length >= want) break;
       }
     }
   }
