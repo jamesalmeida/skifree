@@ -146,12 +146,14 @@ export class ClassicRenderer {
     ctx.fillStyle = SNOW;
     ctx.fillRect(0, 0, w, h);
 
-    // approx dt from player motion (renderer has no clock); use steady ~16ms feel
-    const dy = Math.abs(snap.player.y - this.lastPlayerY);
-    this.lastPlayerY = snap.player.y;
+    // approx dt from camera / player motion; use steady ~16ms feel
+    const motionY = snap.hidePlayer ? snap.cameraY : snap.player.y;
+    const dy = Math.abs(motionY - this.lastPlayerY);
+    this.lastPlayerY = motionY;
     const dt = Math.min(0.05, Math.max(1 / 120, dy > 0.01 ? 1 / 60 : 1 / 60));
     this.sprayTime += dt;
-    this.updateSnowSpray(snap, dt);
+    if (!snap.hidePlayer) this.updateSnowSpray(snap, dt);
+    else this.spray = [];
 
     const camX = snap.cameraX;
     const camY = snap.cameraY;
