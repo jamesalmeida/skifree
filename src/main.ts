@@ -1,5 +1,6 @@
 import "./style.css";
 import { Game } from "./game/Game";
+import { prefersTouchUi } from "./game/Input";
 import type { CharacterType, ControlScheme, GameMode, GraphicsMode } from "./game/types";
 import { SHOW_DIR_DEBUG } from "./game/originalConstants";
 import { ClassicRenderer } from "./render/ClassicRenderer";
@@ -32,16 +33,21 @@ const gameoverMsg = document.getElementById("gameover-msg")!;
 const gameoverStats = document.getElementById("gameover-stats")!;
 
 const CONTROLS_KEY = "skifree-controls";
+const touchUi = prefersTouchUi();
 
 let mode: GameMode = "freestyle";
 let character: CharacterType = "skier";
 let graphics: GraphicsMode = "classic";
-let controls: ControlScheme =
-  localStorage.getItem(CONTROLS_KEY) === "mouse" ? "mouse" : "keyboard";
+let controls: ControlScheme = touchUi
+  ? "mouse"
+  : localStorage.getItem(CONTROLS_KEY) === "mouse"
+    ? "mouse"
+    : "keyboard";
 
 const game = new Game(canvas, { mode, character, graphics, controls });
 const classic = new ClassicRenderer(canvas);
 const modern = new Renderer3D(canvas3d);
+const hudPauseBtn = document.getElementById("hud-pause")!;
 
 function bindOptionRow<T extends string>(
   rowId: string,
@@ -85,7 +91,7 @@ const controlsHelps = [
 
 function applyControlsUi(scheme: ControlScheme) {
   controls = scheme;
-  localStorage.setItem(CONTROLS_KEY, scheme);
+  if (!touchUi) localStorage.setItem(CONTROLS_KEY, scheme);
   game.config.controls = scheme;
   document
     .querySelectorAll("#controls-row .opt, #pause-controls-row .opt")
@@ -94,7 +100,12 @@ function applyControlsUi(scheme: ControlScheme) {
     });
   let hint: string;
   let help: string;
-  if (scheme === "mouse") {
+  if (touchUi) {
+    hint = "Drag to steer · tap to jump / flip. Pause button top-left.";
+    help = `
+      <p>Touch · drag to steer · tap to jump / flip</p>
+      <p>Use ⏸ to pause or return to the main menu</p>`;
+  } else if (scheme === "mouse") {
     hint = "Pointer steers; click or Space to jump; ↑ in air for backflips.";
     help = `
       <p>Mouse · steer · click / <kbd>Space</kbd> jump · <kbd>↑</kbd> air flip</p>
@@ -165,6 +176,10 @@ function syncUi() {
   // Keep HUD visible while yeti celebrates (eaten)
   hud.classList.toggle("hidden", !playing && snap.state !== "eaten");
   pauseOverlay.classList.toggle("hidden", snap.state !== "paused");
+  hudPauseBtn.classList.toggle(
+    "hidden",
+    !touchUi || snap.state !== "playing",
+  );
 
   const showOver = eatenOrFinished;
   gameoverOverlay.classList.toggle("hidden", !showOver);
@@ -211,6 +226,14 @@ document.getElementById("start-btn")!.addEventListener("click", () => {
 document.getElementById("resume-btn")!.addEventListener("click", () => {
   game.togglePause();
   syncUi();
+});
+
+hudPauseBtn.addEventListener("click", (e) => {
+  e.stopPropagation();
+  if (game.state === "playing") {
+    game.togglePause();
+    syncUi();
+  }
 });
 
 document.getElementById("menu-btn")!.addEventListener("click", () => {

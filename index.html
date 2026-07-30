@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>SkiFree Remake</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='14' font-size='14'>🎿</text></svg>" />
   </head>
@@ -10,6 +10,7 @@
     <div id="app">
       <canvas id="game"></canvas>
       <div id="hud" class="hidden">
+        <button type="button" id="hud-pause" class="hud-pause hidden" aria-label="Pause">⏸</button>
         <div id="stats">
           <div>Time: <span id="stat-time">0:00:00.00</span></div>
           <div>Dist: <span id="stat-dist">0</span>m</div>

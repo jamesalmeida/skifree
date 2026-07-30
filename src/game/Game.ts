@@ -214,7 +214,10 @@ export class Game {
       this.input.wasPressed("numpad8") ||
       this.input.wasPressed("8");
 
-    if (scheme === "mouse") {
+    // Mouse scheme, or active touch drag (works even if menu still says Keyboard)
+    const usePointer = scheme === "mouse" || this.input.touchSteering;
+
+    if (usePointer) {
       let mouseDx: number | null = null;
       if (this.input.mouseInCanvas) {
         const originX = this.canvas.clientWidth / 2;
@@ -595,8 +598,15 @@ export class Game {
       gatesTotal: this.world.gatesTotal,
       penaltyMs: this.penaltyMs,
       message: this.message,
-      mouseX: this.input.mouseInCanvas ? this.input.mouseX : null,
-      mouseY: this.input.mouseInCanvas ? this.input.mouseY : null,
+      // Hide classic cursor while touch-steering (finger isn't a mouse pointer)
+      mouseX:
+        this.input.mouseInCanvas && !this.input.touchSteering
+          ? this.input.mouseX
+          : null,
+      mouseY:
+        this.input.mouseInCanvas && !this.input.touchSteering
+          ? this.input.mouseY
+          : null,
       timeScale: this.timeScale,
     };
   }

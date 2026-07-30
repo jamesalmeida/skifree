@@ -26,7 +26,8 @@ body,
   color: var(--ink);
 }
 
-#game {
+#game,
+#game3d {
   display: block;
   width: 100%;
   height: 100%;
@@ -34,6 +35,7 @@ body,
   image-rendering: crisp-edges;
   cursor: none;
   background: var(--snow);
+  touch-action: none;
 }
 
 #hud {
@@ -41,6 +43,29 @@ body,
   inset: 0;
   pointer-events: none;
   z-index: 5;
+}
+
+.hud-pause {
+  position: absolute;
+  top: max(12px, env(safe-area-inset-top));
+  left: max(12px, env(safe-area-inset-left));
+  width: 48px;
+  height: 48px;
+  border: 2px solid var(--border);
+  border-radius: 10px;
+  background: var(--panel);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  pointer-events: auto;
+  box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.15);
+  z-index: 6;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.hud-pause:active {
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0 rgba(0, 0, 0, 0.15);
 }
 
 #stats {
