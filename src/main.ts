@@ -74,30 +74,45 @@ bindOptionRow<GraphicsMode>("gfx-row", "gfx", (v) => {
   graphics = v;
 });
 
-const controlsHint = document.getElementById("controls-hint")!;
-const controlsHelp = document.getElementById("controls-help")!;
+const controlsHints = [
+  document.getElementById("controls-hint")!,
+  document.getElementById("pause-controls-hint")!,
+];
+const controlsHelps = [
+  document.getElementById("controls-help")!,
+  document.getElementById("pause-controls-help")!,
+];
 
 function applyControlsUi(scheme: ControlScheme) {
   controls = scheme;
   localStorage.setItem(CONTROLS_KEY, scheme);
-  document.querySelectorAll("#controls-row .opt").forEach((b) => {
-    b.classList.toggle("active", b.getAttribute("data-controls") === scheme);
-  });
+  game.config.controls = scheme;
+  document
+    .querySelectorAll("#controls-row .opt, #pause-controls-row .opt")
+    .forEach((b) => {
+      b.classList.toggle("active", b.getAttribute("data-controls") === scheme);
+    });
+  let hint: string;
+  let help: string;
   if (scheme === "mouse") {
-    controlsHint.textContent =
-      "Pointer steers; click or Space to jump; ↑ in air for backflips.";
-    controlsHelp.innerHTML = `
+    hint = "Pointer steers; click or Space to jump; ↑ in air for backflips.";
+    help = `
       <p>Mouse · steer · click / <kbd>Space</kbd> jump · <kbd>↑</kbd> air flip</p>
       <p><kbd>F</kbd> turbo · <kbd>F2</kbd> restart · <kbd>F3</kbd> / <kbd>P</kbd> pause · <kbd>G</kbd> gfx · <kbd>C</kbd> char</p>`;
   } else {
-    controlsHint.textContent = "Arrow keys / WASD / numpad · Space to jump.";
-    controlsHelp.innerHTML = `
+    hint = "Arrow keys / WASD / numpad · Space to jump.";
+    help = `
       <p><kbd>←</kbd><kbd>→</kbd> / <kbd>A</kbd><kbd>D</kbd> steer · <kbd>↑</kbd> brake / flip · <kbd>↓</kbd> / <kbd>S</kbd> tuck · <kbd>Space</kbd> jump</p>
       <p><kbd>F</kbd> turbo · <kbd>F2</kbd> restart · <kbd>F3</kbd> / <kbd>P</kbd> pause · <kbd>G</kbd> gfx · <kbd>C</kbd> char</p>`;
   }
+  for (const el of controlsHints) el.textContent = hint;
+  for (const el of controlsHelps) el.innerHTML = help;
 }
 
 bindOptionRow<ControlScheme>("controls-row", "controls", (v) => {
+  applyControlsUi(v);
+});
+bindOptionRow<ControlScheme>("pause-controls-row", "controls", (v) => {
   applyControlsUi(v);
 });
 applyControlsUi(controls);

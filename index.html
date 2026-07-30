@@ -67,7 +67,7 @@
             <p><kbd>F</kbd> turbo · <kbd>F2</kbd> restart · <kbd>F3</kbd> / <kbd>P</kbd> pause · <kbd>G</kbd> gfx · <kbd>C</kbd> char</p>
           </div>
 
-          <button type="button" id="settings-gear" class="settings-gear" title="Fine-tune game feel" aria-label="Settings">
+          <button type="button" class="settings-gear" title="Fine-tune game feel" aria-label="Settings">
             ⚙
           </button>
         </div>
@@ -98,11 +98,32 @@
         </div>
       </div>
       <div id="pause-overlay" class="hidden">
-        <div class="overlay-panel">
+        <div class="overlay-panel pause-panel">
           <h2>Paused</h2>
-          <p>Press <kbd>F3</kbd> or <kbd>P</kbd> to continue</p>
-          <button type="button" id="resume-btn">Resume</button>
-          <button type="button" id="menu-btn" class="secondary">Main menu</button>
+          <p class="pause-continue">Press <kbd>F3</kbd> or <kbd>P</kbd> to continue</p>
+
+          <section class="option-group">
+            <label>Controls</label>
+            <div class="btn-row" id="pause-controls-row">
+              <button type="button" data-controls="keyboard" class="opt active">Keyboard</button>
+              <button type="button" data-controls="mouse" class="opt">Mouse</button>
+            </div>
+            <p class="hint" id="pause-controls-hint">Arrow keys / WASD / numpad to steer.</p>
+          </section>
+
+          <div class="help" id="pause-controls-help">
+            <p><kbd>←</kbd><kbd>→</kbd> / <kbd>A</kbd><kbd>D</kbd> steer · <kbd>↑</kbd> brake / flip · <kbd>↓</kbd> / <kbd>S</kbd> tuck · <kbd>Space</kbd> jump</p>
+            <p><kbd>F</kbd> turbo · <kbd>F2</kbd> restart · <kbd>F3</kbd> / <kbd>P</kbd> pause · <kbd>G</kbd> gfx · <kbd>C</kbd> char</p>
+          </div>
+
+          <div class="overlay-actions">
+            <button type="button" id="resume-btn">Resume</button>
+            <button type="button" id="menu-btn" class="secondary">Main menu</button>
+          </div>
+
+          <button type="button" class="settings-gear" title="Fine-tune game feel" aria-label="Settings">
+            ⚙
+          </button>
         </div>
       </div>
       <div id="gameover-overlay" class="hidden">

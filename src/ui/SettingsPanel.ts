@@ -182,7 +182,7 @@ const GROUP_LABELS: Record<Field["group"], string> = {
 type TabId = "general" | "feel" | "sprites";
 
 export function initSettingsPanel(onChange?: () => void) {
-  const gear = document.getElementById("settings-gear")!;
+  const gears = document.querySelectorAll<HTMLButtonElement>(".settings-gear");
   const panel = document.getElementById("settings-panel")!;
   const closeBtn = document.getElementById("settings-close")!;
   const resetBtn = document.getElementById("settings-reset")!;
@@ -493,9 +493,11 @@ export function initSettingsPanel(onChange?: () => void) {
     }
   }
 
-  gear.addEventListener("click", (e) => {
-    e.stopPropagation();
-    open();
+  gears.forEach((gear) => {
+    gear.addEventListener("click", (e) => {
+      e.stopPropagation();
+      open();
+    });
   });
   closeBtn.addEventListener("click", close);
   backdrop.addEventListener("click", close);

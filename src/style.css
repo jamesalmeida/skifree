@@ -513,7 +513,8 @@ body,
 
 .opt,
 .start,
-.overlay-panel button {
+.overlay-actions button,
+#gameover-overlay .overlay-panel > button {
   appearance: none;
   border: 2px solid var(--border);
   background: #fff;
@@ -529,7 +530,8 @@ body,
 
 .opt:hover,
 .start:hover,
-.overlay-panel button:hover {
+.overlay-actions button.secondary:hover,
+#gameover-overlay .overlay-panel > button.secondary:hover {
   background: #edf2f7;
 }
 
@@ -593,9 +595,23 @@ kbd {
   margin-bottom: 8px;
 }
 
-.overlay-panel p {
+.overlay-panel > p,
+.pause-continue {
   color: var(--muted);
   margin-bottom: 12px;
+}
+
+.pause-panel {
+  text-align: left;
+}
+
+.pause-panel h2,
+.pause-panel .pause-continue {
+  text-align: center;
+}
+
+.pause-panel .help {
+  margin-bottom: 4px;
 }
 
 #gameover-stats {
@@ -606,7 +622,12 @@ kbd {
   line-height: 1.5;
 }
 
-.overlay-panel button {
+.overlay-actions {
+  margin-top: 8px;
+}
+
+.overlay-actions button,
+#gameover-overlay .overlay-panel > button {
   display: block;
   width: 100%;
   margin-top: 8px;
@@ -615,7 +636,13 @@ kbd {
   border-color: #1e3a8a;
 }
 
-.overlay-panel button.secondary {
+.overlay-actions button:hover,
+#gameover-overlay .overlay-panel > button:hover {
+  background: #1d4ed8;
+}
+
+.overlay-actions button.secondary,
+#gameover-overlay .overlay-panel > button.secondary {
   background: #fff;
   color: var(--ink);
   border-color: var(--border);
