@@ -630,6 +630,11 @@ kbd {
   text-align: left;
 }
 
+.pause-panel .settings-gear {
+  top: 12px;
+  bottom: auto;
+}
+
 .pause-panel h2,
 .pause-panel .pause-continue {
   text-align: center;
