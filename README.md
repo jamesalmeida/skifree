@@ -20,6 +20,16 @@ npm run dev
 
 Then open the URL Vite prints (usually http://localhost:5173).
 
+## Deploy (play it online, e.g. from an iPad)
+
+This is a 100% static site, so it deploys to Vercel with zero config (Vercel auto-detects Vite; build `npm run build`, output `dist/`). A `vercel.json` is included to make that explicit.
+
+One-tap deploy straight from a browser (no terminal needed):
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fjamesalmeida%2Fskifree)
+
+Sign in with GitHub, accept the defaults, and Vercel gives you a public `https://…vercel.app` URL you can play on any device.
+
 ## Controls
 
 | Input | Action |
