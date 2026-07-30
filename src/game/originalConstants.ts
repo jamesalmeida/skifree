@@ -65,7 +65,7 @@ export const DEFAULT_SETTINGS: TunableSettings = {
   classicScale: 2,
   mouseDeadZone: 16,
   mouseHardZone: 96,
-  showDirDebug: true,
+  showDirDebug: false,
   enhancedAnimations: false,
 };
 
