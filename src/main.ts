@@ -71,7 +71,7 @@ bindOptionRow<CharacterType>("char-row", "char", (v) => {
       : "Classic two-ski control (original sprites from SKI.EXE).";
 });
 bindOptionRow<GraphicsMode>("gfx-row", "gfx", (v) => {
-  graphics = v;
+  applyGraphics(v);
 });
 
 const controlsHints = [
